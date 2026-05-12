@@ -27,8 +27,11 @@ void kernel_print(const char *str) {
 }
 
 void kernel_main(void) {
-    kernel_print("Welcome to Bare Metal OS!\n");
+    kernel_print("=================================\n");
+    kernel_print("      Welcome to NexusOS\n");
+    kernel_print("=================================\n");
     kernel_print("Kernel loaded successfully.\n");
+    kernel_print("System initialized.\n");
     
     // Halt
     while (1) {
