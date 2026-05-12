@@ -1,4 +1,4 @@
-.PHONY: build run clean debug
+.PHONY: all build run clean debug
 
 # Compiler and tools
 NASM := nasm
@@ -18,24 +18,31 @@ KERNEL_OBJ := $(BUILD_DIR)/kernel.o
 KERNEL_ENTRY_OBJ := $(BUILD_DIR)/kernel_entry.o
 OS_IMAGE := $(BUILD_DIR)/os.bin
 
-# Targets
-build: $(OS_IMAGE)
+# Default target
+all: build
 
+# Create build directory
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
+# Build bootloader
 $(BOOTLOADER): bootloader/boot.asm | $(BUILD_DIR)
 	$(NASM) $(NASM_FLAGS) bootloader/boot.asm -o $(BOOTLOADER)
 
+# Build kernel entry
 $(KERNEL_ENTRY_OBJ): kernel/kernel_entry.asm | $(BUILD_DIR)
 	$(NASM) -f elf64 kernel/kernel_entry.asm -o $(KERNEL_ENTRY_OBJ)
 
+# Build kernel
 $(KERNEL_OBJ): kernel/kernel.c | $(BUILD_DIR)
 	$(CC) $(CC_FLAGS) kernel/kernel.c -o $(KERNEL_OBJ)
 
+# Link everything
 $(OS_IMAGE): $(BOOTLOADER) $(KERNEL_ENTRY_OBJ) $(KERNEL_OBJ)
 	$(LD) $(LD_FLAGS) $(KERNEL_ENTRY_OBJ) $(KERNEL_OBJ) -o $(BUILD_DIR)/kernel.bin
 	cat $(BOOTLOADER) $(BUILD_DIR)/kernel.bin > $(OS_IMAGE)
+
+build: $(OS_IMAGE)
 
 run: build
 	$(QEMU) -drive format=raw,file=$(OS_IMAGE) -serial stdio -nographic
