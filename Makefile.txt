@@ -1,0 +1,48 @@
+.PHONY: build run clean debug
+
+# Compiler and tools
+NASM := nasm
+CC := gcc
+LD := ld
+QEMU := qemu-system-x86_64
+
+# Flags
+NASM_FLAGS := -f bin
+CC_FLAGS := -ffreestanding -fno-pic -m64 -c
+LD_FLAGS := -m elf_x86_64 -T kernel/linker.ld
+
+# Output
+BUILD_DIR := build
+BOOTLOADER := $(BUILD_DIR)/bootloader.bin
+KERNEL_OBJ := $(BUILD_DIR)/kernel.o
+KERNEL_ENTRY_OBJ := $(BUILD_DIR)/kernel_entry.o
+OS_IMAGE := $(BUILD_DIR)/os.bin
+
+# Targets
+build: $(OS_IMAGE)
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+$(BOOTLOADER): bootloader/boot.asm | $(BUILD_DIR)
+	$(NASM) $(NASM_FLAGS) bootloader/boot.asm -o $(BOOTLOADER)
+
+$(KERNEL_ENTRY_OBJ): kernel/kernel_entry.asm | $(BUILD_DIR)
+	$(NASM) -f elf64 kernel/kernel_entry.asm -o $(KERNEL_ENTRY_OBJ)
+
+$(KERNEL_OBJ): kernel/kernel.c | $(BUILD_DIR)
+	$(CC) $(CC_FLAGS) kernel/kernel.c -o $(KERNEL_OBJ)
+
+$(OS_IMAGE): $(BOOTLOADER) $(KERNEL_ENTRY_OBJ) $(KERNEL_OBJ)
+	$(LD) $(LD_FLAGS) $(KERNEL_ENTRY_OBJ) $(KERNEL_OBJ) -o $(BUILD_DIR)/kernel.bin
+	cat $(BOOTLOADER) $(BUILD_DIR)/kernel.bin > $(OS_IMAGE)
+
+run: build
+	$(QEMU) -drive format=raw,file=$(OS_IMAGE)
+
+debug: build
+	$(QEMU) -drive format=raw,file=$(OS_IMAGE) -s -S &
+	gdb -ex "target remote localhost:1234" -ex "symbol-file $(BUILD_DIR)/kernel.bin"
+
+clean:
+	rm -rf $(BUILD_DIR)
