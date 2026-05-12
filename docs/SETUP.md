@@ -1,4 +1,4 @@
-# Development Setup
+# NexusOS Development Setup
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ brew tap Homebrew/homebrew-cask
 pacman -S nasm gcc binutils qemu
 ```
 
-## Building
+## Building NexusOS
 
 ```bash
 make build
@@ -30,13 +30,13 @@ This will:
 2. Compile and link the kernel
 3. Combine them into `build/os.bin`
 
-## Running
+## Running NexusOS
 
 ```bash
 make run
 ```
 
-QEMU will launch with your OS image.
+QEMU will launch with your NexusOS image.
 
 ## Debugging
 
