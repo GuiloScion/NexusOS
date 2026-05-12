@@ -45,7 +45,7 @@ $(OS_IMAGE): $(BOOTLOADER) $(KERNEL_ENTRY_OBJ) $(KERNEL_OBJ)
 build: $(OS_IMAGE)
 
 run: build
-	$(QEMU) -drive format=raw,file=$(OS_IMAGE) -serial stdio -nographic
+	$(QEMU) -drive format=raw,file=$(OS_IMAGE) -serial mon:stdio -nographic
 
 debug: build
 	$(QEMU) -drive format=raw,file=$(OS_IMAGE) -s -S &
