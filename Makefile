@@ -54,7 +54,7 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 # Final disk image: bootloader (sector 1) + kernel (sectors 2..N)
 $(OS_IMAGE): $(BOOTLOADER) $(KERNEL_BIN)
 	cat $(BOOTLOADER) $(KERNEL_BIN) > $@
-	@truncate -s %512 $@
+	@truncate -s '>64K' $@
 
 # Codespaces / headless: serial to terminal, no graphical display
 run: $(OS_IMAGE)
