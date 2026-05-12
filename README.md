@@ -1,4 +1,4 @@
-# Bare Metal OS
+# NexusOS
 
 A from-scratch x86-64 operating system written in Assembly and C.
 
