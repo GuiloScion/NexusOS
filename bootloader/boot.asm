@@ -1,7 +1,7 @@
 [BITS 16]
 [ORG 0x7C00]
 
-; BIOS bootloader - 512 byte MBR
+; NexusOS BIOS bootloader - 512 byte MBR
 
 start:
     ; Initialize registers
@@ -39,7 +39,7 @@ halt:
     hlt                 ; Halt CPU
     jmp halt
 
-msg_welcome: db "Bare Metal OS Bootloader", 0x0D, 0x0A, 0
+msg_welcome: db "NexusOS Bootloader Loading...", 0x0D, 0x0A, 0
 
 ; Padding to 510 bytes
 times 510 - ($ - $$) db 0
