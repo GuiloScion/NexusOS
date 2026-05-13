@@ -20,9 +20,19 @@
 #include "pmm.h"
 #include "vmm.h"
 #include "kmalloc.h"
+#include "sched.h"
 #include "io.h"
 
 extern uint8_t __kernel_end;        /* from linker.ld */
+
+/* Demo tasks: each just spins, incrementing a counter. The shell's `tasks`
+ * command prints these alongside the scheduler's own switch count so you
+ * can watch all three numbers climb together. Counters are volatile so the
+ * compiler doesn't optimize the loops into nothing. */
+static volatile uint64_t counter_a, counter_b;
+
+static void task_a_main(void) { for (;;) counter_a++; }
+static void task_b_main(void) { for (;;) counter_b++; }
 
 static uint64_t e820_ram_end(void) {
     uint32_t      count   = *(volatile uint32_t *)E820_COUNT_ADDR;
@@ -54,7 +64,7 @@ static void shell(void) {
             line[n] = '\0';
             if (n == 0) { /* nothing */ }
             else if (n == 4 && line[0]=='h' && line[1]=='e' && line[2]=='l' && line[3]=='p') {
-                console_puts("commands: help, ticks, mem, halt\n");
+                console_puts("commands: help, ticks, mem, tasks, halt\n");
             } else if (n == 5 && line[0]=='t' && line[1]=='i' && line[2]=='c' && line[3]=='k' && line[4]=='s') {
                 console_puts("ticks: "); console_put_dec(pit_ticks()); console_putc('\n');
             } else if (n == 3 && line[0]=='m' && line[1]=='e' && line[2]=='m') {
@@ -64,6 +74,10 @@ static void shell(void) {
                 console_puts(" / ");           console_put_dec(pmm_total_frames());
                 console_puts("\nheap used:  "); console_put_dec(used);
                 console_puts(" B, free: ");    console_put_dec(freeb); console_puts(" B\n");
+            } else if (n == 5 && line[0]=='t' && line[1]=='a' && line[2]=='s' && line[3]=='k' && line[4]=='s') {
+                console_puts("switches: "); console_put_dec(sched_switches()); console_putc('\n');
+                console_puts("counter_a: "); console_put_dec(counter_a); console_putc('\n');
+                console_puts("counter_b: "); console_put_dec(counter_b); console_putc('\n');
             } else if (n == 4 && line[0]=='h' && line[1]=='a' && line[2]=='l' && line[3]=='t') {
                 console_puts("halting.\n");
                 for (;;) { cli(); hlt(); }
@@ -118,5 +132,10 @@ void kernel_main(void) {
     kfree(b); kfree(a); kfree(c);
 
     console_puts("\nNexusOS ready. Type 'help' for commands.\n");
-    shell();
+
+    sched_init();
+    task_create("counter_a", task_a_main);
+    task_create("counter_b", task_b_main);
+
+    shell();    /* runs forever as the idle task */
 }
