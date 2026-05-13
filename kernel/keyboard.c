@@ -12,6 +12,7 @@
 #include "idt.h"
 #include "io.h"
 #include "pic.h"
+#include "console.h"
 
 #define KBD_DATA    0x60
 
@@ -99,7 +100,8 @@ bool keyboard_try_getc(char *out) {
 char keyboard_getc(void) {
     for (;;) {
         char c;
-        if (keyboard_try_getc(&c)) return c;
+        if (keyboard_try_getc(&c)) return c;   /* PS/2 path (real HW, or QEMU with display) */
+        if (console_try_getc(&c))  return c;   /* serial path (QEMU -display none) */
         __asm__ volatile ("sti; hlt");
     }
 }
