@@ -4,6 +4,7 @@
 #include "io.h"
 #include "idt.h"
 #include "pic.h"
+#include "sched.h"
 
 #define PIT_CH0     0x40
 #define PIT_CMD     0x43
@@ -12,8 +13,8 @@
 static volatile uint64_t ticks;
 
 static void pit_irq(interrupt_frame_t *frame) {
-    (void)frame;
     ticks++;
+    scheduler_tick(frame);      /* may not return (context switch) */
 }
 
 void pit_init(uint32_t hz) {
