@@ -100,7 +100,11 @@ static NORETURN void panic_on_exception(interrupt_frame_t *f) {
     for (;;) { cli(); hlt(); }
 }
 
-/* Called from the common assembly stub. */
+/* Called from the common assembly stub. IRQ handlers are responsible for
+ * sending their own EOI, the scheduler may not return from the PIT path
+ * (it tail-calls _switch_to), so a dispatcher-level EOI would either be
+ * skipped on switch or double-sent on no-switch. Each handler does it at
+ * the top, before any work, so an EOI happens exactly once. */
 void interrupt_dispatch(interrupt_frame_t *frame) {
     uint64_t v = frame->vector;
 
@@ -108,12 +112,13 @@ void interrupt_dispatch(interrupt_frame_t *frame) {
         panic_on_exception(frame);
     } else if (v < 32 + 16) {
         uint8_t irq = (uint8_t)(v - 32);
-        if (irq_handlers[irq]) {
-            irq_handlers[irq](frame);
-        }
-        pic_send_eoi(irq);
+        if (irq_handlers[irq]) irq_handlers[irq](frame);
+    } else if (v == 0x80) {
+        /* Software yield: invoked by tasks via `int $0x80`. */
+        extern void scheduler_tick(interrupt_frame_t *);
+        scheduler_tick(frame);
     }
-    /* vectors >= 48 are not generated yet -- ignore. */
+    /* Other vectors are not generated yet; ignore. */
 }
 
 void irq_register(uint8_t irq, irq_handler_t handler) {
