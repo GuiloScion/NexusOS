@@ -1,4 +1,4 @@
-/* console.c -- writes go to both COM1 (serial) and the VGA text buffer. */
+/* console.c, writes go to both COM1 (serial) and the VGA text buffer. */
 #include "console.h"
 #include "io.h"
 #include "string.h"
@@ -26,7 +26,7 @@ static void serial_putc(char c) {
     outb(COM1, (uint8_t)c);
 }
 
-/* Non-blocking read from COM1. Translates terminal conventions to ours:
+/* Non-blocking read from COM1.
  *   carriage-return (Enter on most terminals) -> '\n'
  *   DEL (0x7F, what most terminals send for Backspace) -> '\b' */
 bool console_try_getc(char *out) {
