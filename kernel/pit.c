@@ -13,8 +13,9 @@
 static volatile uint64_t ticks;
 
 static void pit_irq(interrupt_frame_t *frame) {
+    pic_send_eoi(0);              /* EOI before any path that may not return */
     ticks++;
-    scheduler_tick(frame);      /* may not return (context switch) */
+    scheduler_tick(frame);        /* may not return (tail-calls _switch_to)  */
 }
 
 void pit_init(uint32_t hz) {
