@@ -32,8 +32,9 @@ BOOTLOADER := $(BUILD_DIR)/bootloader.bin
 KERNEL_ELF := $(BUILD_DIR)/kernel.elf
 KERNEL_BIN := $(BUILD_DIR)/kernel.bin
 OS_IMAGE   := $(BUILD_DIR)/os.bin
+FAT_IMAGE  := $(BUILD_DIR)/fat.img
 
-all: $(OS_IMAGE)
+all: $(OS_IMAGE) $(FAT_IMAGE)
 
 $(BUILD_DIR):
 	mkdir -p $@
@@ -63,13 +64,26 @@ $(OS_IMAGE): $(BOOTLOADER) $(KERNEL_BIN)
 	cat $(BOOTLOADER) $(KERNEL_BIN) > $@
 	@truncate -s '>1M' $@
 
-run: $(OS_IMAGE)
-	$(QEMU) -drive format=raw,file=$(OS_IMAGE) \
+# --- FAT image -------------------------------------------------------
+# 1.44 MB floppy formatted FAT12 with a couple of sample files.
+# Uses mtools (mformat, mcopy) so we don't need root or a loopback mount.
+$(FAT_IMAGE): | $(BUILD_DIR)
+	dd if=/dev/zero of=$@ bs=1024 count=1440 status=none
+	mformat -i $@ -f 1440 ::
+	@printf 'hello, world from a FAT12 filesystem\n' > $(BUILD_DIR)/_hello.txt
+	@printf 'NexusOS storage stack test file.\nIf you can read this, ATA + FAT12 work.\n' > $(BUILD_DIR)/_readme.txt
+	mcopy -i $@ $(BUILD_DIR)/_hello.txt  ::HELLO.TXT
+	mcopy -i $@ $(BUILD_DIR)/_readme.txt ::README.TXT
+
+run: $(OS_IMAGE) $(FAT_IMAGE)
+	$(QEMU) -drive format=raw,file=$(OS_IMAGE),if=ide,index=0 \
+	        -drive format=raw,file=$(FAT_IMAGE),if=ide,index=1 \
 	        -m 256M \
 	        -serial stdio -display none -no-reboot
 
-debug: $(OS_IMAGE)
-	$(QEMU) -drive format=raw,file=$(OS_IMAGE) \
+debug: $(OS_IMAGE) $(FAT_IMAGE)
+	$(QEMU) -drive format=raw,file=$(OS_IMAGE),if=ide,index=0 \
+	        -drive format=raw,file=$(FAT_IMAGE),if=ide,index=1 \
 	        -m 256M \
 	        -serial stdio -display none -s -S &
 	gdb -ex "target remote localhost:1234" \
