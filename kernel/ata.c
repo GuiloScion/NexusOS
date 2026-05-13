@@ -65,8 +65,8 @@ static semaphore_t io_done;
 static mutex_t     io_lock;       /* serializes commands to the controller   */
 static bool        initialized = false;
 
-/* Spin until BSY clears or polled enough to declare the drive dead.
- * On real hardware would add a wall-clock timeout; QEMU responds in
+/* Spin until BSY clears or we've polled enough to declare the drive dead.
+ * On real hardware you'd add a wall-clock timeout; QEMU responds in
  * microseconds, so a bounded poll suffices here. */
 static bool wait_not_busy(void) {
     for (int i = 0; i < 1000000; i++) {
@@ -96,8 +96,14 @@ bool ata_init(void) {
     sem_init(&io_done, 0);
     mutex_init(&io_lock);
 
-    /* Make sure controller interrupts are enabled (nIEN bit cleared). */
-    outb(ATA_PRIMARY_CTRL, 0x00);
+    /* Disable controller interrupts during init. The IDENTIFY command
+     * completes asynchronously and would otherwise queue an IRQ in the
+     * PIC (masked at this point but latched in IRR) that would fire
+     * spuriously the moment we unmask IRQ14, pre-posting our semaphore
+     * and making the first real read return before its data was ready.
+     * nIEN (bit 1 of the device control reg) blocks the device from
+     * asserting INTRQ at all. */
+    outb(ATA_PRIMARY_CTRL, 0x02);
 
     /* Select slave drive and let it settle. */
     outb(REG_DRIVE, DRIVE_SLAVE_LBA);
@@ -126,6 +132,9 @@ bool ata_init(void) {
     /* Drain the 256-word identify block; we don't actually use it, but
      * leaving data in the controller would jam the next command. */
     for (int i = 0; i < 256; i++) (void)inw(REG_DATA);
+
+    /* Re-enable interrupts on the controller now that init's done. */
+    outb(ATA_PRIMARY_CTRL, 0x00);
 
     irq_register(14, ata_irq);
     pic_unmask(14);
