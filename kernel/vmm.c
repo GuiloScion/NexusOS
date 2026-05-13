@@ -15,11 +15,6 @@
  * If PTE_HUGE is set in a PDPT or PD entry the entry is itself the
  * leaf (1 GiB or 2 MiB page respectively).
  *
- * Bootstrap concern: during vmm_init() we're still running on the old
- * single-2-MiB identity map installed by kernel_entry.asm, so every
- * frame we ask PMM for here must lie within the first 2 MiB of RAM
- * (so we can write to it). PMM starts handing out frames from 1 MiB
- * upward, which keeps us safely inside that window.
  */
 
 #include "vmm.h"
