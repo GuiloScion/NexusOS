@@ -22,6 +22,8 @@
 #include "kmalloc.h"
 #include "sched.h"
 #include "sync.h"
+#include "ata.h"
+#include "fat.h"
 #include "io.h"
 
 extern uint8_t __kernel_end;        /* from linker.ld */
@@ -129,7 +131,7 @@ static void shell(void) {
             line[n] = '\0';
             if (n == 0) { /* nothing */ }
             else if (n == 4 && line[0]=='h' && line[1]=='e' && line[2]=='l' && line[3]=='p') {
-                console_puts("commands: help, ticks, mem, tasks, prod, halt\n");
+                console_puts("commands: help, ticks, mem, tasks, prod, ls, cat <file>, halt\n");
             } else if (n == 5 && line[0]=='t' && line[1]=='i' && line[2]=='c' && line[3]=='k' && line[4]=='s') {
                 console_puts("ticks: "); console_put_dec(pit_ticks()); console_putc('\n');
             } else if (n == 3 && line[0]=='m' && line[1]=='e' && line[2]=='m') {
@@ -140,7 +142,9 @@ static void shell(void) {
                 console_puts("\nheap used:  "); console_put_dec(used);
                 console_puts(" B, free: ");    console_put_dec(freeb); console_puts(" B\n");
             } else if (n == 5 && line[0]=='t' && line[1]=='a' && line[2]=='s' && line[3]=='k' && line[4]=='s') {
-            
+                /* Sample everything once, atomically with respect to ourselves,
+                 * by reading without locks -- the sum/diff might be off by one
+                 * if a task is mid-update, which is acceptable for a stats peek. */
                 uint64_t a = counter_a, b = counter_b, sh = shared_counter;
                 uint64_t expected = a + b;
                 console_puts("switches:        "); console_put_dec(sched_switches()); console_putc('\n');
@@ -154,6 +158,18 @@ static void shell(void) {
                 console_puts("produced: "); console_put_dec(p); console_putc('\n');
                 console_puts("consumed: "); console_put_dec(c); console_putc('\n');
                 console_puts("in queue: "); console_put_dec(p - c); console_putc('\n');
+            } else if (n == 2 && line[0]=='l' && line[1]=='s') {
+                fat_ls_root();
+            } else if (n >= 5 && line[0]=='c' && line[1]=='a' && line[2]=='t' && line[3]==' ') {
+                static uint8_t filebuf[8192];
+                const char *name = &line[4];
+                uint32_t got = fat_read_file(name, filebuf, sizeof(filebuf));
+                if (got == 0) {
+                    console_puts("file not found or empty\n");
+                } else {
+                    for (uint32_t i = 0; i < got; i++) console_putc((char)filebuf[i]);
+                    if (filebuf[got - 1] != '\n') console_putc('\n');
+                }
             } else if (n == 4 && line[0]=='h' && line[1]=='a' && line[2]=='l' && line[3]=='t') {
                 console_puts("halting.\n");
                 for (;;) { cli(); hlt(); }
@@ -222,6 +238,12 @@ void kernel_main(void) {
     sem_init(&full_slots, 0);
     task_create("producer", producer_main);
     task_create("consumer", consumer_main);
+
+    /* Disk + filesystem. ATA reads block on a semaphore so this must
+     * happen after the scheduler is up. */
+    if (ata_init()) {
+        fat_mount();
+    }
 
     shell();    /* runs forever as the idle task */
 }
