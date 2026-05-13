@@ -26,6 +26,18 @@ static void serial_putc(char c) {
     outb(COM1, (uint8_t)c);
 }
 
+/* Non-blocking read from COM1. Translates terminal conventions to ours:
+ *   carriage-return (Enter on most terminals) -> '\n'
+ *   DEL (0x7F, what most terminals send for Backspace) -> '\b' */
+bool console_try_getc(char *out) {
+    if ((inb(COM1 + 5) & 0x01) == 0) return false;
+    uint8_t b = inb(COM1);
+    if      (b == '\r') *out = '\n';
+    else if (b == 0x7F) *out = '\b';
+    else                *out = (char)b;
+    return true;
+}
+
 static void vga_scroll(void) {
     /* move rows 1..H-1 up by one */
     for (uint32_t row = 1; row < VGA_H; row++) {
