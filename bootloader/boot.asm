@@ -6,7 +6,7 @@
 ; Responsibilities:
 ;   1. Read the physical memory map from BIOS (int 0x15, eax=0xE820)
 ;      and stash it at 0x9000 (count) + 0x9008 (24-byte entries).
-;      Must be done in real mode -- BIOS is gone once we leave.
+;      Must be done in real mode -- BIOS is gone once left.
 ;   2. Load the kernel image to physical 0x10000.
 ;   3. Enable A20, install GDT, enter 32-bit protected mode.
 ;   4. Far-jump to the kernel entry stub at 0x10000.
