@@ -36,7 +36,7 @@ typedef struct PACKED {
 } idt_pointer_t;
 
 #define IDT_SIZE        256
-#define KERNEL_CS       0x08
+#define KERNEL_CS       0x18    /* 64-bit code segment (matches jmp 0x18:long_mode in kernel_entry.asm) */
 #define GATE_INTERRUPT  0x8E    /* present, DPL=0, type=interrupt gate */
 
 static idt_gate_t  idt[IDT_SIZE] ALIGN(16);
