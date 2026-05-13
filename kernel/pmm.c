@@ -52,9 +52,13 @@ void pmm_init(uintptr_t kernel_end_phys) {
     uint32_t        count   = *(volatile uint32_t *)E820_COUNT_ADDR;
     e820_entry_t   *entries = (e820_entry_t *)E820_ENTRIES_ADDR;
 
-    /* Find highest physical address claimed by E820. */
+    /* Find highest physical address claimed by USABLE E820 entries.
+     * Including reserved/MMIO regions (PCI hole at ~1 TiB on QEMU) would
+     * balloon the bitmap into tens of MiB and overrun the early 2 MiB
+     * identity map, clobbering the page tables at 0x70000. */
     uint64_t max_addr = 0;
     for (uint32_t i = 0; i < count; i++) {
+        if (entries[i].type != 1) continue;
         uint64_t top = entries[i].base + entries[i].length;
         if (top > max_addr) max_addr = top;
     }
