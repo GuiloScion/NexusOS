@@ -53,6 +53,7 @@ static void ring_push(char c) {
 
 static void keyboard_irq(interrupt_frame_t *frame) {
     (void)frame;
+    pic_send_eoi(1);              /* EOI first; symmetric with pit_irq */
     uint8_t sc = inb(KBD_DATA);
 
     if (sc == 0xE0) { ext_prefix = true; return; }
