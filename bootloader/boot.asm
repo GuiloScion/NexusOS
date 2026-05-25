@@ -57,6 +57,45 @@ start:
     mov word [0x9004], 0
     mov word [0x9006], 0
 
+    ; ---------------- VBE: linear-framebuffer graphics mode ---------
+    ; Get mode info for 1024x768x32 (VBE mode 0x118) into a scratch
+    ; block at 0:0x9800, then set the mode with the linear-FB bit.
+    ; On success, hand the kernel a small descriptor at 0x9700:
+    ;   [0x9700] dd  framebuffer physical base
+    ;   [0x9704] dd  pitch (bytes per scanline)
+    ;   [0x9708] dd  width
+    ;   [0x970C] dd  height
+    ;   [0x9710] dd  bits per pixel
+    ;   [0x9714] dd  valid (1 = graphics mode set, 0 = text mode)
+    ; es is still 0 here (left over from the E820 loop).
+    mov ax, 0x4F01
+    mov cx, 0x118
+    mov di, 0x9800
+    int 0x10
+    cmp ax, 0x004F
+    jne .vbe_fail
+    mov ax, 0x4F02
+    mov bx, 0x118
+    or  bx, 0x4000              ; bit 14 = use linear framebuffer
+    int 0x10
+    cmp ax, 0x004F
+    jne .vbe_fail
+    mov eax, [0x9800 + 40]      ; PhysBasePtr
+    mov [0x9700], eax
+    movzx eax, word [0x9800 + 16]   ; BytesPerScanLine
+    mov [0x9704], eax
+    movzx eax, word [0x9800 + 18]   ; XResolution
+    mov [0x9708], eax
+    movzx eax, word [0x9800 + 20]   ; YResolution
+    mov [0x970C], eax
+    movzx eax, byte [0x9800 + 25]   ; BitsPerPixel
+    mov [0x9710], eax
+    mov dword [0x9714], 1
+    jmp .vbe_done
+.vbe_fail:
+    mov dword [0x9714], 0
+.vbe_done:
+
     ; ---------------- Load kernel to 0x10000 ------------------------
     mov ax, 0x1000
     mov es, ax

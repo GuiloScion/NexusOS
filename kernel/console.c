@@ -1,5 +1,7 @@
-/* console.c, writes go to both COM1 (serial) and the VGA text buffer. */
+/* console.c, writes go to COM1 (serial), the VGA text buffer, and -- once a
+ * graphics mode is up -- the framebuffer text console. */
 #include "console.h"
+#include "fbcon.h"
 #include "io.h"
 #include "string.h"
 
@@ -77,6 +79,7 @@ void console_putc(char c) {
     if (c == '\n') serial_putc('\r');
     serial_putc(c);
     vga_putc(c);
+    if (fbcon_ready()) fbcon_putc(c);
 }
 
 void console_puts(const char *s) {

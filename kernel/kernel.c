@@ -24,6 +24,8 @@
 #include "sync.h"
 #include "ata.h"
 #include "fat.h"
+#include "fb.h"
+#include "fbcon.h"
 #include "io.h"
 
 extern uint8_t __kernel_end;        /* from linker.ld */
@@ -212,6 +214,26 @@ void kernel_main(void) {
     vmm_init(ram_end);
 
     kmalloc_init();
+
+    if (fb_init()) {
+        const framebuffer_t *f = fb_get();
+        console_puts("[fb] ");
+        console_put_dec(f->width); console_putc('x');
+        console_put_dec(f->height); console_putc('x');
+        console_put_dec(f->bpp);
+        console_puts(" @ "); console_put_hex((uintptr_t)f->addr);
+        console_puts(" pitch="); console_put_dec(f->pitch); console_putc('\n');
+
+        /* Bring up the on-screen text console. From here, console output is
+         * visible on the framebuffer (the legacy VGA text buffer is dark in
+         * graphics mode). */
+        fbcon_init();
+        console_puts("==========================================\n");
+        console_puts("       NexusOS  -  x86_64 graphics\n");
+        console_puts("==========================================\n");
+    } else {
+        console_puts("[fb] no framebuffer; staying on text/serial\n");
+    }
 
     /* Sanity-check the heap. */
     void *a = kmalloc(64);

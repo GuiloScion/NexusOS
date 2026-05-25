@@ -163,6 +163,11 @@ bool ata_read_sector(uint32_t lba, void *buf) {
     /* Block until IRQ14 says the sector buffer is ready. */
     sem_wait(&io_done);
 
+    /* The interrupt only tells us the controller asserted INTRQ; the drive
+     * may still have BSY set briefly. Wait for it to clear before trusting
+     * the DRQ/ERR bits. */
+    wait_not_busy();
+
     uint8_t status = inb(REG_STATUS);
     if (status & ST_ERR) {
         mutex_unlock(&io_lock);
