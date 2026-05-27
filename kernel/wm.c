@@ -8,6 +8,7 @@
 #include "sched.h"
 #include "kmalloc.h"
 #include "console.h"
+#include "string.h"
 
 #define MAX_WINDOWS  8
 #define TITLE_H      24
@@ -81,20 +82,41 @@ int wm_add_window(int x, int y, int w, int body_h, const char *title,
     return new_window(x, y, w, body_h, title, lines, nlines, COL_BODY, false);
 }
 
+/* Draw text left-to-right but stop before any glyph would cross `right`, so
+ * window text can never spill past the window border onto the desktop. */
+static void draw_text_clip(int x, int y, const char *s, uint32_t fg, int right) {
+    int cx = x;
+    for (; *s; s++) {
+        if (cx + 8 * TXT_SCALE > right) break;
+        gfx_glyph(&back, cx, y, *s, fg, 0, TXT_SCALE, false);
+        cx += 8 * TXT_SCALE;
+    }
+}
+
+/* Width needed to show the title and every line, plus side margins. */
+static int content_width(const char *title, const char *const *lines, int n) {
+    int maxc = (int)strlen(title) + 1;       /* +1 for the title-bar inset */
+    for (int i = 0; i < n; i++) {
+        int l = (int)strlen(lines[i]);
+        if (l > maxc) maxc = l;
+    }
+    return maxc * (8 * TXT_SCALE) + 16;
+}
+
 static void draw_window(const window_t *w, bool focused) {
     int th = win_total_h(w);
     gfx_fill(&back, w->x - BORDER, w->y - BORDER,
              w->w + 2 * BORDER, th + 2 * BORDER, COL_BORDER);
     gfx_fill(&back, w->x, w->y, w->w, TITLE_H, focused ? COL_TITLE_A : COL_TITLE_I);
-    gfx_text(&back, w->x + 6, w->y + 4, w->title, COL_TITLE_TXT, TXT_SCALE);
+    draw_text_clip(w->x + 6, w->y + 4, w->title, COL_TITLE_TXT, w->x + w->w - 2);
     gfx_fill(&back, w->x, w->y + TITLE_H, w->w, w->h, w->body);
 
     if (w->is_terminal) {
         fbcon_render(&back, w->x + PAD, w->y + TITLE_H + PAD);
     } else {
         for (int i = 0; i < w->nlines; i++)
-            gfx_text(&back, w->x + 8, w->y + TITLE_H + 8 + i * LINE_H,
-                     w->lines[i], COL_BODY_TXT, TXT_SCALE);
+            draw_text_clip(w->x + 8, w->y + TITLE_H + 8 + i * LINE_H,
+                           w->lines[i], COL_BODY_TXT, w->x + w->w - 4);
     }
 }
 
@@ -221,8 +243,10 @@ void wm_init(void) {
     int tw = (int)(cols * cell) + 2 * PAD;
     int thh = (int)(rows * cell) + 2 * PAD;
 
-    wm_add_window(150,  70, 360, 6 * LINE_H + 16, "Welcome", w_welcome, 6);
-    wm_add_window(620, 100, 360, 5 * LINE_H + 16, "System",  w_system, 5);
+    wm_add_window(70,  70, content_width("Welcome", w_welcome, 6),
+                  6 * LINE_H + 16, "Welcome", w_welcome, 6);
+    wm_add_window(540, 100, content_width("System", w_system, 5),
+                  5 * LINE_H + 16, "System",  w_system, 5);
     new_window(70, 360, tw, thh, "Terminal", NULL, 0, fbcon_bg(), true);
 
     active = true;
