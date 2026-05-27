@@ -6,9 +6,9 @@ code are original.
 
 ![NexusOS booted to its compositing desktop, with the shell running in a terminal window](docs/screenshot.png)
 
-*NexusOS running its compositing window manager. The terminal shows the `tasks`
-self-check: `a+b - shared = 0`, i.e. the mutex held across hundreds of thousands
-of context switches.*
+*NexusOS running its compositing window manager: draggable windows with
+close/minimize buttons, the shell in a terminal window, and a taskbar with
+per-window buttons and an uptime clock.*
 
 ## Status
 
