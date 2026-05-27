@@ -26,6 +26,7 @@
 #include "fat.h"
 #include "fb.h"
 #include "fbcon.h"
+#include "mouse.h"
 #include "io.h"
 
 extern uint8_t __kernel_end;        /* from linker.ld */
@@ -266,6 +267,8 @@ void kernel_main(void) {
     if (ata_init()) {
         fat_mount();
     }
+
+    mouse_init();   /* draws the cursor last, on top of the boot screen */
 
     shell();    /* runs forever as the idle task */
 }

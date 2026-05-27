@@ -23,9 +23,10 @@ bool                 fb_init(void);
 bool                 fb_active(void);
 const framebuffer_t *fb_get(void);
 
-void fb_clear(uint32_t color);
-void fb_putpixel(uint32_t x, uint32_t y, uint32_t color);
-void fb_fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color);
+void     fb_clear(uint32_t color);
+void     fb_putpixel(uint32_t x, uint32_t y, uint32_t color);
+uint32_t fb_getpixel(uint32_t x, uint32_t y);
+void     fb_fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color);
 
 static inline uint32_t fb_rgb(uint8_t r, uint8_t g, uint8_t b) {
     return ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;

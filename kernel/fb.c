@@ -59,6 +59,15 @@ void fb_putpixel(uint32_t x, uint32_t y, uint32_t color) {
     }
 }
 
+uint32_t fb_getpixel(uint32_t x, uint32_t y) {
+    if (!fb.active || x >= fb.width || y >= fb.height) return 0;
+    uint8_t *p = fb.addr + (uint64_t)y * fb.pitch + (uint64_t)x * (fb.bpp / 8);
+    if (fb.bpp == 32) {
+        return *(uint32_t *)p;
+    }
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16);
+}
+
 void fb_fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
     if (!fb.active) return;
     uint32_t x1 = x + w, y1 = y + h;
