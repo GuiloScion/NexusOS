@@ -9,6 +9,7 @@
 #include "kmalloc.h"
 #include "console.h"
 #include "string.h"
+#include "pit.h"
 
 #define MAX_WINDOWS  8
 #define TITLE_H      24
@@ -16,6 +17,10 @@
 #define LINE_H       18
 #define TXT_SCALE    2
 #define PAD          6
+#define BTN_W        20          /* title-bar button width */
+#define TASKBAR_H    30
+#define TB_BTN_W     150
+#define TB_GAP       6
 
 typedef struct {
     int  x, y, w, h;            /* h is body height (title bar is extra) */
@@ -24,6 +29,8 @@ typedef struct {
     int  nlines;
     uint32_t body;
     bool is_terminal;
+    bool closable;
+    bool minimized;
     bool used;
 } window_t;
 
@@ -37,9 +44,11 @@ static int       nwins;
 
 static volatile bool layout_dirty;
 static uint64_t      last_console_ver;
+static uint64_t      last_sec;
 
 static uint32_t COL_DESKTOP, COL_BORDER, COL_TITLE_A, COL_TITLE_I,
-                COL_BODY, COL_BODY_TXT, COL_TITLE_TXT;
+                COL_BODY, COL_BODY_TXT, COL_TITLE_TXT,
+                COL_CLOSE, COL_MIN, COL_TASKBAR, COL_TB_BTN, COL_TB_ACTIVE;
 
 /* ---- arrow cursor bitmap ------------------------------------------------ */
 #define CUR_H 19
@@ -59,31 +68,10 @@ static void draw_cursor(int mx, int my) {
     }
 }
 
-/* ---- window helpers ----------------------------------------------------- */
+/* ---- text helpers ------------------------------------------------------- */
 
-static int win_total_h(const window_t *w) { return TITLE_H + w->h; }
-
-static int new_window(int x, int y, int w, int h, const char *title,
-                      const char *const *lines, int nlines,
-                      uint32_t body, bool terminal) {
-    if (nwins >= MAX_WINDOWS) return -1;
-    int id = nwins;
-    wins[id] = (window_t){ .x = x, .y = y, .w = w, .h = h, .title = title,
-                           .lines = lines, .nlines = nlines, .body = body,
-                           .is_terminal = terminal, .used = true };
-    zorder[nwins] = id;
-    nwins++;
-    layout_dirty = true;
-    return id;
-}
-
-int wm_add_window(int x, int y, int w, int body_h, const char *title,
-                  const char *const *lines, int nlines) {
-    return new_window(x, y, w, body_h, title, lines, nlines, COL_BODY, false);
-}
-
-/* Draw text left-to-right but stop before any glyph would cross `right`, so
- * window text can never spill past the window border onto the desktop. */
+/* Draw text but stop before any glyph would cross `right`, so window text can
+ * never spill past the window border onto the desktop. */
 static void draw_text_clip(int x, int y, const char *s, uint32_t fg, int right) {
     int cx = x;
     for (; *s; s++) {
@@ -93,9 +81,8 @@ static void draw_text_clip(int x, int y, const char *s, uint32_t fg, int right) 
     }
 }
 
-/* Width needed to show the title and every line, plus side margins. */
 static int content_width(const char *title, const char *const *lines, int n) {
-    int maxc = (int)strlen(title) + 1;       /* +1 for the title-bar inset */
+    int maxc = (int)strlen(title) + 1;
     for (int i = 0; i < n; i++) {
         int l = (int)strlen(lines[i]);
         if (l > maxc) maxc = l;
@@ -103,14 +90,60 @@ static int content_width(const char *title, const char *const *lines, int n) {
     return maxc * (8 * TXT_SCALE) + 16;
 }
 
+/* ---- window model ------------------------------------------------------- */
+
+static int win_total_h(const window_t *w) { return TITLE_H + w->h; }
+
+static int new_window(int x, int y, int w, int h, const char *title,
+                      const char *const *lines, int nlines,
+                      uint32_t body, bool terminal, bool closable) {
+    if (nwins >= MAX_WINDOWS) return -1;
+    int id = nwins;
+    wins[id] = (window_t){ .x = x, .y = y, .w = w, .h = h, .title = title,
+                           .lines = lines, .nlines = nlines, .body = body,
+                           .is_terminal = terminal, .closable = closable,
+                           .minimized = false, .used = true };
+    zorder[nwins] = id;
+    nwins++;
+    layout_dirty = true;
+    return id;
+}
+
+int wm_add_window(int x, int y, int w, int body_h, const char *title,
+                  const char *const *lines, int nlines) {
+    return new_window(x, y, w, body_h, title, lines, nlines, COL_BODY, false, true);
+}
+
+/* topmost non-minimized window id, or -1 */
+static int focused_id(void) {
+    for (int i = nwins - 1; i >= 0; i--)
+        if (!wins[zorder[i]].minimized) return zorder[i];
+    return -1;
+}
+
 static void draw_window(const window_t *w, bool focused) {
     int th = win_total_h(w);
     gfx_fill(&back, w->x - BORDER, w->y - BORDER,
              w->w + 2 * BORDER, th + 2 * BORDER, COL_BORDER);
     gfx_fill(&back, w->x, w->y, w->w, TITLE_H, focused ? COL_TITLE_A : COL_TITLE_I);
-    draw_text_clip(w->x + 6, w->y + 4, w->title, COL_TITLE_TXT, w->x + w->w - 2);
-    gfx_fill(&back, w->x, w->y + TITLE_H, w->w, w->h, w->body);
 
+    /* Title-bar buttons, right to left: [close][min]. */
+    int rx = w->x + w->w;
+    if (w->closable) {
+        int b = rx - BTN_W;
+        gfx_fill(&back, b, w->y, BTN_W, TITLE_H, COL_CLOSE);
+        gfx_glyph(&back, b + 2, w->y + 4, 'X', 0xFFFFFF, 0, TXT_SCALE, false);
+        rx = b;
+    }
+    {
+        int b = rx - BTN_W;
+        gfx_fill(&back, b, w->y, BTN_W, TITLE_H, COL_MIN);
+        gfx_glyph(&back, b + 2, w->y + 4, '_', 0xFFFFFF, 0, TXT_SCALE, false);
+        rx = b;
+    }
+    draw_text_clip(w->x + 6, w->y + 4, w->title, COL_TITLE_TXT, rx - 2);
+
+    gfx_fill(&back, w->x, w->y + TITLE_H, w->w, w->h, w->body);
     if (w->is_terminal) {
         fbcon_render(&back, w->x + PAD, w->y + TITLE_H + PAD);
     } else {
@@ -120,10 +153,23 @@ static void draw_window(const window_t *w, bool focused) {
     }
 }
 
-/* topmost window whose bounds contain (px,py), or -1 (returns z-order slot) */
+/* 0 = none, 1 = close, 2 = minimize */
+static int titlebar_button(const window_t *w, int mx, int my) {
+    if (my < w->y || my >= w->y + TITLE_H) return 0;
+    int rx = w->x + w->w;
+    if (w->closable) {
+        if (mx >= rx - BTN_W && mx < rx) return 1;
+        rx -= BTN_W;
+    }
+    if (mx >= rx - BTN_W && mx < rx) return 2;
+    return 0;
+}
+
+/* topmost visible window whose bounds contain (px,py); returns z-order slot */
 static int window_at(int px, int py) {
     for (int i = nwins - 1; i >= 0; i--) {
         const window_t *w = &wins[zorder[i]];
+        if (w->minimized) continue;
         if (px >= w->x - BORDER && px < w->x + w->w + BORDER &&
             py >= w->y - BORDER && py < w->y + win_total_h(w) + BORDER)
             return i;
@@ -139,6 +185,68 @@ static void raise_slot(int slot) {
     layout_dirty = true;
 }
 
+static void focus_id(int id) {
+    wins[id].minimized = false;
+    for (int i = 0; i < nwins; i++)
+        if (zorder[i] == id) { raise_slot(i); return; }
+}
+
+static void close_window(int id) {
+    for (int i = 0; i < nwins; i++)
+        if (zorder[i] == id) {
+            for (int j = i; j < nwins - 1; j++) zorder[j] = zorder[j + 1];
+            nwins--;
+            break;
+        }
+    wins[id].used = false;
+    layout_dirty = true;
+}
+
+/* ---- taskbar ------------------------------------------------------------ */
+
+static void format_uptime(char *out) {
+    uint64_t s = pit_ticks() / 100;
+    uint64_t mm = (s / 60) % 100, ss = s % 60;
+    out[0] = '0' + (char)(mm / 10); out[1] = '0' + (char)(mm % 10);
+    out[2] = ':';
+    out[3] = '0' + (char)(ss / 10); out[4] = '0' + (char)(ss % 10);
+    out[5] = '\0';
+}
+
+static void draw_taskbar(int fid) {
+    int W = (int)back.width, H = (int)back.height;
+    int ty = H - TASKBAR_H;
+    gfx_fill(&back, 0, ty, W, TASKBAR_H, COL_TASKBAR);
+
+    int bx = 6;
+    for (int id = 0; id < MAX_WINDOWS; id++) {
+        if (!wins[id].used) continue;
+        bool act = (id == fid);
+        gfx_fill(&back, bx, ty + 4, TB_BTN_W, TASKBAR_H - 8,
+                 act ? COL_TB_ACTIVE : COL_TB_BTN);
+        draw_text_clip(bx + 6, ty + (TASKBAR_H - 16) / 2, wins[id].title,
+                       COL_TITLE_TXT, bx + TB_BTN_W - 4);
+        bx += TB_BTN_W + TB_GAP;
+    }
+
+    char clk[8];
+    format_uptime(clk);
+    draw_text_clip(W - 90, ty + (TASKBAR_H - 16) / 2, clk, COL_TITLE_TXT, W - 4);
+}
+
+static int taskbar_at(int mx, int my) {
+    int H = (int)back.height;
+    int ty = H - TASKBAR_H;
+    if (my < ty + 4 || my >= ty + TASKBAR_H - 4) return -1;
+    int bx = 6;
+    for (int id = 0; id < MAX_WINDOWS; id++) {
+        if (!wins[id].used) continue;
+        if (mx >= bx && mx < bx + TB_BTN_W) return id;
+        bx += TB_BTN_W + TB_GAP;
+    }
+    return -1;
+}
+
 /* ---- input -------------------------------------------------------------- */
 
 static void poll_input(void) {
@@ -151,18 +259,27 @@ static void poll_input(void) {
     bool left = (mouse_buttons() & MOUSE_BTN_LEFT) != 0;
 
     if (left && !prev_left) {
-        int slot = window_at(mx, my);
-        if (slot >= 0) {
-            int id = zorder[slot];
-            raise_slot(slot);
-            const window_t *w = &wins[id];
-            if (my < w->y + TITLE_H) {
-                dragging = true; drag_id = id;
-                drag_dx = mx - w->x; drag_dy = my - w->y;
+        int tid = taskbar_at(mx, my);
+        if (tid >= 0) {
+            focus_id(tid);                  /* restore + raise */
+        } else {
+            int slot = window_at(mx, my);
+            if (slot >= 0) {
+                int id = zorder[slot];
+                raise_slot(slot);
+                int btn = titlebar_button(&wins[id], mx, my);
+                if (btn == 1) {
+                    close_window(id);
+                } else if (btn == 2) {
+                    wins[id].minimized = true; layout_dirty = true;
+                } else if (my < wins[id].y + TITLE_H) {
+                    dragging = true; drag_id = id;
+                    drag_dx = mx - wins[id].x; drag_dy = my - wins[id].y;
+                }
             }
         }
     }
-    if (left && dragging) {
+    if (left && dragging && wins[drag_id].used) {
         wins[drag_id].x = mx - drag_dx;
         wins[drag_id].y = my - drag_dy;
         layout_dirty = true;
@@ -175,8 +292,13 @@ static void poll_input(void) {
 
 static void compose(void) {
     gfx_fill(&back, 0, 0, (int)back.width, (int)back.height, COL_DESKTOP);
-    for (int i = 0; i < nwins; i++)
-        draw_window(&wins[zorder[i]], i == nwins - 1);
+    int fid = focused_id();
+    for (int i = 0; i < nwins; i++) {
+        int id = zorder[i];
+        if (wins[id].minimized) continue;
+        draw_window(&wins[id], id == fid);
+    }
+    draw_taskbar(fid);
 }
 
 static void present(void) {
@@ -188,9 +310,11 @@ static void compositor_task(void) {
     for (;;) {
         poll_input();
         uint64_t v = fbcon_version();
-        if (layout_dirty || v != last_console_ver) {
+        uint64_t sec = pit_ticks() / 100;
+        if (layout_dirty || v != last_console_ver || sec != last_sec) {
             compose();
             last_console_ver = v;
+            last_sec = sec;
             layout_dirty = false;
         }
         present();
@@ -234,8 +358,13 @@ void wm_init(void) {
     COL_BODY      = gfx_rgb(238, 238, 244);
     COL_BODY_TXT  = gfx_rgb(24, 24, 34);
     COL_TITLE_TXT = gfx_rgb(245, 245, 250);
+    COL_CLOSE     = gfx_rgb(200, 70, 70);
+    COL_MIN       = gfx_rgb(90, 92, 110);
+    COL_TASKBAR   = gfx_rgb(22, 26, 40);
+    COL_TB_BTN    = gfx_rgb(55, 60, 82);
+    COL_TB_ACTIVE = gfx_rgb(60, 95, 205);
 
-    /* The terminal hosts the text console. Size its grid, then make a window
+    /* The terminal hosts the text console; size its grid, then make a window
      * exactly big enough to show it. */
     uint32_t cols = 46, rows = 19;
     fbcon_init(cols, rows);
@@ -247,7 +376,7 @@ void wm_init(void) {
                   6 * LINE_H + 16, "Welcome", w_welcome, 6);
     wm_add_window(540, 100, content_width("System", w_system, 5),
                   5 * LINE_H + 16, "System",  w_system, 5);
-    new_window(70, 360, tw, thh, "Terminal", NULL, 0, fbcon_bg(), true);
+    new_window(70, 340, tw, thh, "Terminal", NULL, 0, fbcon_bg(), true, false);
 
     active = true;
     task_create("compositor", compositor_task);

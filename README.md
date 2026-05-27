@@ -54,7 +54,8 @@ debugging).
 - **Window manager.** A compositing WM (`kernel/wm.c`) with an off-screen back
   buffer: desktop → z-ordered windows are composed on change, presented every
   frame with the cursor as an overlay (so nothing under the cursor is ever
-  clobbered). Click to focus/raise, drag windows by the title bar.
+  clobbered). Click to focus/raise, drag windows by the title bar, close /
+  minimize buttons, and a taskbar (per-window buttons + an uptime clock).
 - **Terminal window.** The interactive shell runs in a draggable terminal
   window. `console_*` output feeds a character grid (`kernel/fbcon.c`) that the
   compositor renders inside that window.
@@ -66,7 +67,7 @@ debugging).
 In rough order, toward a usable GUI:
 
 1. Per-window keyboard focus routing (multiple terminals / text fields).
-2. Widgets — buttons, a taskbar, window close/resize controls.
+2. More widgets — window resize, buttons, a few demo apps.
 3. Syscall interface (`syscall`/`sysret`) + user mode (ring 3, ELF loader),
    so apps can run outside the kernel.
 4. VFS layer over the existing FAT driver; write support.
