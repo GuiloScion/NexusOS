@@ -7,9 +7,9 @@ code are original.
 ## Status
 
 Boots on QEMU into a graphical desktop: a VESA linear framebuffer driven by a
-compositing window manager, with draggable windows over a text-console
-background and a mouse cursor. The interactive shell is mirrored over serial
-for debugging.
+compositing window manager, with draggable windows and a mouse cursor. The
+interactive shell runs in a terminal window (and is mirrored over serial for
+debugging).
 
 ### What works
 
@@ -46,11 +46,12 @@ for debugging.
 - **Mouse.** PS/2 mouse on IRQ12 — 3-byte packet parsing, position clamped to
   the screen, button state.
 - **Window manager.** A compositing WM (`kernel/wm.c`) with an off-screen back
-  buffer: desktop → text console → z-ordered windows are composed each change,
-  presented every frame with the cursor as an overlay (so nothing under the
-  cursor is ever clobbered). Click to focus/raise, drag windows by the title bar.
-- **Text console.** Now a character grid (`kernel/fbcon.c`); `console_*` writes
-  feed the grid and the compositor renders it as the desktop background.
+  buffer: desktop → z-ordered windows are composed on change, presented every
+  frame with the cursor as an overlay (so nothing under the cursor is ever
+  clobbered). Click to focus/raise, drag windows by the title bar.
+- **Terminal window.** The interactive shell runs in a draggable terminal
+  window. `console_*` output feeds a character grid (`kernel/fbcon.c`) that the
+  compositor renders inside that window.
 - **Interactive shell.** `help`, `ticks`, `mem`, `tasks`, `prod`, `ls`,
   `cat <file>`, `halt`.
 
@@ -58,7 +59,7 @@ for debugging.
 
 In rough order, toward a usable GUI:
 
-1. Host the shell inside a terminal window (and route keyboard focus to it).
+1. Per-window keyboard focus routing (multiple terminals / text fields).
 2. Widgets — buttons, a taskbar, window close/resize controls.
 3. Syscall interface (`syscall`/`sysret`) + user mode (ring 3, ELF loader),
    so apps can run outside the kernel.
@@ -122,6 +123,16 @@ nexus>
 `Ctrl-A x` exits QEMU (serial/`-display none` runs); close the window
 otherwise.
 
+To open a real GUI window instead of the headless serial console (needs a
+display — e.g. WSLg on Windows, or any X/Wayland session):
+
+```sh
+make rungui
+```
+
+Click into the window to grab the mouse, drag windows by their title bars, and
+type into the terminal. `Ctrl-Alt-G` releases the mouse grab.
+
 ### Debugging
 
 ```sh
@@ -149,8 +160,8 @@ back buffer whenever something changes, then every frame blits that buffer to
 the screen and paints the mouse cursor on top. Because the cursor is a
 per-frame overlay (never stored in the scene), it never clobbers content.
 `console_*` output feeds `kernel/fbcon.c`, now a character grid the compositor
-renders as the desktop background. Mouse clicks focus/raise windows; dragging
-a title bar moves a window.
+renders inside a terminal window. Mouse clicks focus/raise windows; dragging a
+title bar moves a window.
 
 ### Capturing a screenshot
 

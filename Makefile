@@ -1,4 +1,4 @@
-.PHONY: all run clean debug
+.PHONY: all run rungui clean debug
 
 NASM    := nasm
 CC      := gcc
@@ -80,6 +80,14 @@ run: $(OS_IMAGE) $(FAT_IMAGE)
 	        -drive format=raw,file=$(FAT_IMAGE),if=ide,index=1 \
 	        -m 256M \
 	        -serial stdio -display none -no-reboot
+
+# Interactive GUI window (needs a display, e.g. WSLg on Windows). Click into
+# the window to grab the mouse; Ctrl-Alt-G releases it.
+rungui: $(OS_IMAGE) $(FAT_IMAGE)
+	$(QEMU) -drive format=raw,file=$(OS_IMAGE),if=ide,index=0 \
+	        -drive format=raw,file=$(FAT_IMAGE),if=ide,index=1 \
+	        -m 256M \
+	        -serial stdio -display gtk -no-reboot
 
 debug: $(OS_IMAGE) $(FAT_IMAGE)
 	$(QEMU) -drive format=raw,file=$(OS_IMAGE),if=ide,index=0 \

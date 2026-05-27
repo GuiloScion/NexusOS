@@ -20,11 +20,10 @@ static uint32_t fg, bg;
 static char     grid[ROWS_MAX][COLS_MAX];
 static uint64_t version;
 
-bool fbcon_init(void) {
+bool fbcon_init(uint32_t want_cols, uint32_t want_rows) {
     if (!fb_active()) { ready = false; return false; }
-    const framebuffer_t *f = fb_get();
-    cols = f->width  / CELL_W; if (cols > COLS_MAX) cols = COLS_MAX;
-    rows = f->height / CELL_H; if (rows > ROWS_MAX) rows = ROWS_MAX;
+    cols = want_cols > COLS_MAX ? COLS_MAX : want_cols;
+    rows = want_rows > ROWS_MAX ? ROWS_MAX : want_rows;
     fg = gfx_rgb(220, 220, 220);
     bg = gfx_rgb(16, 16, 28);
     cur_col = cur_row = 0;
@@ -38,6 +37,8 @@ bool fbcon_init(void) {
 bool     fbcon_ready(void)   { return ready; }
 uint64_t fbcon_version(void) { return version; }
 uint32_t fbcon_bg(void)      { return bg; }
+uint32_t fbcon_cell(void)    { return CELL_W; }
+void     fbcon_cols_rows(uint32_t *c, uint32_t *r) { *c = cols; *r = rows; }
 
 void fbcon_set_colors(uint32_t f, uint32_t b) { fg = f; bg = b; version++; }
 
@@ -78,13 +79,14 @@ void fbcon_putc(char c) {
     if (++cur_col >= cols) newline();
 }
 
-void fbcon_render(const surface_t *dst) {
+void fbcon_render(const surface_t *dst, int ox, int oy) {
     if (!ready) return;
     for (uint32_t r = 0; r < rows; r++) {
         for (uint32_t c = 0; c < cols; c++) {
             char ch = grid[r][c];
             if (ch != ' ' && ch != '\0')
-                gfx_glyph(dst, (int)(c * CELL_W), (int)(r * CELL_H), ch, fg, bg, SCALE, false);
+                gfx_glyph(dst, ox + (int)(c * CELL_W), oy + (int)(r * CELL_H),
+                          ch, fg, bg, SCALE, false);
         }
     }
 }

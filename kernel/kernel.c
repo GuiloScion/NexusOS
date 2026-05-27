@@ -225,14 +225,8 @@ void kernel_main(void) {
         console_put_dec(f->bpp);
         console_puts(" @ "); console_put_hex((uintptr_t)f->addr);
         console_puts(" pitch="); console_put_dec(f->pitch); console_putc('\n');
-
-        /* Bring up the on-screen text console. From here, console output is
-         * visible on the framebuffer (the legacy VGA text buffer is dark in
-         * graphics mode). */
-        fbcon_init();
-        console_puts("==========================================\n");
-        console_puts("       NexusOS  -  x86_64 graphics\n");
-        console_puts("==========================================\n");
+        /* The on-screen console comes up later, inside the window manager's
+         * terminal window (see wm_init). Until then output goes to serial. */
     } else {
         console_puts("[fb] no framebuffer; staying on text/serial\n");
     }
