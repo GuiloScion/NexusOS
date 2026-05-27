@@ -4,6 +4,12 @@ A small x86-64 operating system, written from scratch. No GRUB, no Limine, no
 tutorial framework — the bootloader, kernel, build system, and every line of
 code are original.
 
+![NexusOS booted to its compositing desktop, with the shell running in a terminal window](docs/screenshot.png)
+
+*NexusOS running its compositing window manager. The terminal shows the `tasks`
+self-check: `a+b - shared = 0`, i.e. the mutex held across hundreds of thousands
+of context switches.*
+
 ## Status
 
 Boots on QEMU into a graphical desktop: a VESA linear framebuffer driven by a
