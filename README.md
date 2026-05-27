@@ -6,9 +6,10 @@ code are original.
 
 ## Status
 
-Boots on QEMU. After hardware init the kernel switches to a VESA linear
-framebuffer, brings up an on-screen text console, and drops you into an
-interactive shell (mirrored over serial for debugging).
+Boots on QEMU into a graphical desktop: a VESA linear framebuffer driven by a
+compositing window manager, with draggable windows over a text-console
+background and a mouse cursor. The interactive shell is mirrored over serial
+for debugging.
 
 ### What works
 
@@ -38,12 +39,18 @@ interactive shell (mirrored over serial for debugging).
   built on the scheduler's BLOCKED state with FIFO-on-release hand-off.
 - **Storage.** Interrupt-driven PIO ATA driver (primary slave) and a
   read-only FAT12 filesystem (`ls`, `cat`).
-- **Graphics.** Bootloader sets a VESA linear-framebuffer mode (1024x768x32,
-  falling back to text mode if unavailable); the kernel maps the framebuffer
-  and exposes pixel/rect drawing primitives (`kernel/fb.c`).
-- **Text console.** 8x8 bitmap font rendered into the framebuffer, with
-  scrolling and backspace, wired into `console_*` so the shell is visible
-  on screen (`kernel/fbcon.c`).
+- **Graphics.** Bootloader sets a VESA linear-framebuffer mode (1024x768,
+  falling back to text mode if unavailable); the kernel maps the framebuffer.
+  `kernel/gfx.c` provides surface-based drawing (pixel/fill/blit/text) that
+  targets either the screen or an off-screen buffer.
+- **Mouse.** PS/2 mouse on IRQ12 — 3-byte packet parsing, position clamped to
+  the screen, button state.
+- **Window manager.** A compositing WM (`kernel/wm.c`) with an off-screen back
+  buffer: desktop → text console → z-ordered windows are composed each change,
+  presented every frame with the cursor as an overlay (so nothing under the
+  cursor is ever clobbered). Click to focus/raise, drag windows by the title bar.
+- **Text console.** Now a character grid (`kernel/fbcon.c`); `console_*` writes
+  feed the grid and the compositor renders it as the desktop background.
 - **Interactive shell.** `help`, `ticks`, `mem`, `tasks`, `prod`, `ls`,
   `cat <file>`, `halt`.
 
@@ -51,13 +58,12 @@ interactive shell (mirrored over serial for debugging).
 
 In rough order, toward a usable GUI:
 
-1. PS/2 mouse driver and a hardware/software cursor.
-2. Compositor / window manager — windows, z-order, dragging, redraw.
-3. Widgets and a few demo apps (terminal window, etc.).
-4. Syscall interface (`syscall`/`sysret`) + user mode (ring 3, ELF loader),
+1. Host the shell inside a terminal window (and route keyboard focus to it).
+2. Widgets — buttons, a taskbar, window close/resize controls.
+3. Syscall interface (`syscall`/`sysret`) + user mode (ring 3, ELF loader),
    so apps can run outside the kernel.
-5. VFS layer over the existing FAT driver; write support.
-6. SMP, ACPI parsing, APIC.
+4. VFS layer over the existing FAT driver; write support.
+5. SMP, ACPI parsing, APIC.
 
 ## Requirements
 
@@ -133,10 +139,18 @@ pitch, dimensions, and bpp — at physical `0x9700` for the kernel. If VBE fails
 it sets a valid flag to 0 and the kernel stays on the text/serial console.
 
 In the kernel, `kernel/fb.c` maps the framebuffer (it lives above identity-
-mapped RAM, so it is mapped page-by-page) and provides `fb_clear`,
-`fb_putpixel`, and `fb_fill_rect`. `kernel/fbcon.c` renders an 8x8 bitmap font
-(`kernel/font8x8.h`) into the framebuffer and is hooked into `console_putc`, so
-every `console_*` call shows up on screen as well as on serial.
+mapped RAM, so it is mapped page-by-page). `kernel/gfx.c` draws onto any
+`surface_t` — the screen or an off-screen buffer — with pixel/fill/blit and
+scaled 8x8 text (`kernel/font8x8.h`).
+
+The window manager (`kernel/wm.c`) owns a compositor: it composes the scene
+(desktop background → text console → z-ordered windows) into an off-screen
+back buffer whenever something changes, then every frame blits that buffer to
+the screen and paints the mouse cursor on top. Because the cursor is a
+per-frame overlay (never stored in the scene), it never clobbers content.
+`console_*` output feeds `kernel/fbcon.c`, now a character grid the compositor
+renders as the desktop background. Mouse clicks focus/raise windows; dragging
+a title bar moves a window.
 
 ### Capturing a screenshot
 
@@ -187,9 +201,12 @@ bash tools/screenshot.sh help      # type a command first, then capture
     ├── ata.{h,c}         # PIO ATA driver (primary slave)
     ├── fat.{h,c}         # read-only FAT12
     │
-    ├── fb.{h,c}          # linear-framebuffer drawing primitives
-    ├── fbcon.{h,c}       # framebuffer text console
-    └── font8x8.h         # 8x8 bitmap font (ASCII 0x00..0x7F)
+    ├── fb.{h,c}          # linear-framebuffer mapping + raw pixel access
+    ├── gfx.{h,c}         # surface drawing: pixel/fill/blit/glyph/text
+    ├── font8x8.h         # 8x8 bitmap font (ASCII 0x00..0x7F)
+    ├── fbcon.{h,c}       # text console as a character grid
+    ├── mouse.{h,c}       # PS/2 mouse (IRQ12)
+    └── wm.{h,c}          # compositing window manager + cursor
 ```
 
 Add a new `.c` or `.asm` under `kernel/` and the Makefile picks it up

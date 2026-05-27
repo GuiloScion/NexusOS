@@ -1,8 +1,8 @@
-/* fbcon.c -- framebuffer text console. See fbcon.h. */
+/* fbcon.c -- text console as a character grid. See fbcon.h. */
 
 #include "fbcon.h"
 #include "fb.h"
-#include "font8x8.h"
+#include "gfx.h"
 #include "string.h"
 
 #define SCALE   2
@@ -10,35 +10,49 @@
 #define CELL_H  (8 * SCALE)
 #define TAB     4
 
+#define COLS_MAX 128
+#define ROWS_MAX 64
+
 static bool     ready;
-static uint32_t cols, rows;        /* console size in character cells */
+static uint32_t cols, rows;
 static uint32_t cur_col, cur_row;
 static uint32_t fg, bg;
+static char     grid[ROWS_MAX][COLS_MAX];
+static uint64_t version;
 
-static void draw_glyph(unsigned char ch, uint32_t cx, uint32_t cy) {
-    const uint8_t *g = font8x8_basic[ch & 0x7F];
-    uint32_t x0 = cx * CELL_W;
-    uint32_t y0 = cy * CELL_H;
-    for (uint32_t row = 0; row < 8; row++) {
-        uint8_t bits = g[row];
-        for (uint32_t col = 0; col < 8; col++) {
-            uint32_t color = (bits >> col) & 1 ? fg : bg;
-            fb_fill_rect(x0 + col * SCALE, y0 + row * SCALE, SCALE, SCALE, color);
-        }
-    }
+bool fbcon_init(void) {
+    if (!fb_active()) { ready = false; return false; }
+    const framebuffer_t *f = fb_get();
+    cols = f->width  / CELL_W; if (cols > COLS_MAX) cols = COLS_MAX;
+    rows = f->height / CELL_H; if (rows > ROWS_MAX) rows = ROWS_MAX;
+    fg = gfx_rgb(220, 220, 220);
+    bg = gfx_rgb(16, 16, 28);
+    cur_col = cur_row = 0;
+    for (uint32_t r = 0; r < ROWS_MAX; r++)
+        for (uint32_t c = 0; c < COLS_MAX; c++) grid[r][c] = ' ';
+    ready = true;
+    version++;
+    return true;
 }
 
-static void erase_cell(uint32_t cx, uint32_t cy) {
-    fb_fill_rect(cx * CELL_W, cy * CELL_H, CELL_W, CELL_H, bg);
+bool     fbcon_ready(void)   { return ready; }
+uint64_t fbcon_version(void) { return version; }
+uint32_t fbcon_bg(void)      { return bg; }
+
+void fbcon_set_colors(uint32_t f, uint32_t b) { fg = f; bg = b; version++; }
+
+void fbcon_clear(void) {
+    if (!ready) return;
+    for (uint32_t r = 0; r < ROWS_MAX; r++)
+        for (uint32_t c = 0; c < COLS_MAX; c++) grid[r][c] = ' ';
+    cur_col = cur_row = 0;
+    version++;
 }
 
 static void scroll(void) {
-    const framebuffer_t *f = fb_get();
-    uint64_t line_bytes = (uint64_t)CELL_H * f->pitch;
-    /* Shift everything up by one text row (forward copy: dst < src is safe). */
-    memcpy(f->addr, f->addr + line_bytes, (uint64_t)(f->height - CELL_H) * f->pitch);
-    /* Clear the now-vacated bottom text row. */
-    fb_fill_rect(0, (rows - 1) * CELL_H, f->width, CELL_H, bg);
+    for (uint32_t r = 1; r < rows; r++)
+        memcpy(grid[r - 1], grid[r], COLS_MAX);
+    for (uint32_t c = 0; c < COLS_MAX; c++) grid[rows - 1][c] = ' ';
     cur_row = rows - 1;
 }
 
@@ -47,42 +61,30 @@ static void newline(void) {
     if (++cur_row >= rows) scroll();
 }
 
-bool fbcon_init(void) {
-    if (!fb_active()) { ready = false; return false; }
-    const framebuffer_t *f = fb_get();
-    cols = f->width  / CELL_W;
-    rows = f->height / CELL_H;
-    fg = fb_rgb(220, 220, 220);
-    bg = fb_rgb(16, 16, 28);
-    cur_col = cur_row = 0;
-    fb_clear(bg);
-    ready = true;
-    return true;
-}
-
-bool fbcon_ready(void) { return ready; }
-
-void fbcon_set_colors(uint32_t f, uint32_t b) { fg = f; bg = b; }
-
-void fbcon_clear(void) {
-    if (!ready) return;
-    fb_clear(bg);
-    cur_col = cur_row = 0;
-}
-
 void fbcon_putc(char c) {
     if (!ready) return;
+    version++;
     switch (c) {
-        case '\n': newline();                       return;
-        case '\r': cur_col = 0;                      return;
-        case '\t':
-            do { fbcon_putc(' '); } while (cur_col % TAB);
-            return;
+        case '\n': newline();                              return;
+        case '\r': cur_col = 0;                            return;
+        case '\t': do { fbcon_putc(' '); } while (cur_col % TAB); return;
         case '\b':
-            if (cur_col > 0) { cur_col--; erase_cell(cur_col, cur_row); }
+            if (cur_col > 0) { cur_col--; grid[cur_row][cur_col] = ' '; }
             return;
         default: break;
     }
-    draw_glyph((unsigned char)c, cur_col, cur_row);
+    if ((unsigned char)c < 0x20) return;
+    grid[cur_row][cur_col] = c;
     if (++cur_col >= cols) newline();
+}
+
+void fbcon_render(const surface_t *dst) {
+    if (!ready) return;
+    for (uint32_t r = 0; r < rows; r++) {
+        for (uint32_t c = 0; c < cols; c++) {
+            char ch = grid[r][c];
+            if (ch != ' ' && ch != '\0')
+                gfx_glyph(dst, (int)(c * CELL_W), (int)(r * CELL_H), ch, fg, bg, SCALE, false);
+        }
+    }
 }

@@ -1,4 +1,4 @@
-/* mouse.c -- PS/2 mouse driver + software arrow cursor. See mouse.h.
+/* mouse.c -- PS/2 mouse driver. See mouse.h.
  *
  * The mouse hangs off the 8042 "second" PS/2 port: commands are sent by
  * prefixing 0xD4 to the controller, and completed packets arrive on IRQ12
@@ -7,10 +7,8 @@
  *   byte1: X movement (9-bit two's complement, sign from byte0)
  *   byte2: Y movement (9-bit, +Y is up, so screen Y moves the other way)
  *
- * The cursor is drawn directly into the framebuffer with save-under-restore.
- * Because there is no compositor yet, text drawn underneath the cursor can be
- * clobbered when the cursor next moves -- that goes away once a window manager
- * owns the screen (roadmap step 4).
+ * This driver only tracks position (clamped to the framebuffer) and buttons;
+ * the window-manager compositor draws the cursor as an overlay.
  */
 
 #include "mouse.h"
@@ -21,39 +19,11 @@
 #include "console.h"
 
 #define PS2_DATA    0x60
-#define PS2_STATUS  0x64        /* read */
-#define PS2_CMD     0x64        /* write */
+#define PS2_STATUS  0x64
+#define PS2_CMD     0x64
 
 #define ST_OUTPUT_FULL  0x01
 #define ST_INPUT_FULL   0x02
-
-/* ---- arrow cursor bitmap: 'X' outline, '.' fill, ' '/end = transparent --- */
-#define CURSOR_W 12
-#define CURSOR_H 19
-static const char *const arrow[CURSOR_H] = {
-    "X",
-    "XX",
-    "X.X",
-    "X..X",
-    "X...X",
-    "X....X",
-    "X.....X",
-    "X......X",
-    "X.......X",
-    "X........X",
-    "X.........X",
-    "X......XXXXX",
-    "X...X..X",
-    "X..XX..X",
-    "X.X  X..X",
-    "XX   X..X",
-    "X     X..X",
-    "      X..X",
-    "       XX",
-};
-
-static const uint32_t COL_BLACK = 0x000000;
-static const uint32_t COL_WHITE = 0xFFFFFF;
 
 static int32_t  mx, my;
 static uint8_t  buttons;
@@ -61,24 +31,18 @@ static uint8_t  buttons;
 static uint8_t  packet[3];
 static int      cycle;
 
-static bool     cursor_on;
-static int32_t  drawn_x, drawn_y;
-static bool     saved_valid;
-static uint32_t saved[CURSOR_H][CURSOR_W];
+/* ---- 8042 polled access (init only) ------------------------------------- */
 
-/* ---- 8042 polled access (used during init only) ------------------------- */
-
-static void ps2_wait_input(void) {     /* wait until safe to write a byte */
+static void ps2_wait_input(void) {
     for (int i = 0; i < 200000; i++)
         if (!(inb(PS2_STATUS) & ST_INPUT_FULL)) return;
 }
-static void ps2_wait_output(void) {    /* wait until a byte is available */
+static void ps2_wait_output(void) {
     for (int i = 0; i < 200000; i++)
         if (inb(PS2_STATUS) & ST_OUTPUT_FULL) return;
 }
-
 static void mouse_cmd(uint8_t cmd) {
-    ps2_wait_input(); outb(PS2_CMD, 0xD4);     /* "next byte -> mouse" */
+    ps2_wait_input(); outb(PS2_CMD, 0xD4);
     ps2_wait_input(); outb(PS2_DATA, cmd);
 }
 static uint8_t ps2_read(void) {
@@ -86,41 +50,10 @@ static uint8_t ps2_read(void) {
     return inb(PS2_DATA);
 }
 
-/* ---- cursor ------------------------------------------------------------- */
-
-static void cursor_save(void) {
-    for (int r = 0; r < CURSOR_H; r++)
-        for (int c = 0; c < CURSOR_W; c++)
-            saved[r][c] = fb_getpixel((uint32_t)(drawn_x + c), (uint32_t)(drawn_y + r));
-}
-static void cursor_restore(void) {
-    for (int r = 0; r < CURSOR_H; r++)
-        for (int c = 0; c < CURSOR_W; c++)
-            fb_putpixel((uint32_t)(drawn_x + c), (uint32_t)(drawn_y + r), saved[r][c]);
-}
-static void cursor_draw(void) {
-    for (int r = 0; r < CURSOR_H; r++) {
-        const char *row = arrow[r];
-        for (int c = 0; row[c]; c++) {
-            if (row[c] == 'X')      fb_putpixel((uint32_t)(drawn_x + c), (uint32_t)(drawn_y + r), COL_BLACK);
-            else if (row[c] == '.') fb_putpixel((uint32_t)(drawn_x + c), (uint32_t)(drawn_y + r), COL_WHITE);
-        }
-    }
-}
-
-static void cursor_redraw(void) {
-    if (!cursor_on) return;
-    if (saved_valid) cursor_restore();
-    drawn_x = mx; drawn_y = my;
-    cursor_save();
-    cursor_draw();
-    saved_valid = true;
-}
-
 /* ---- IRQ ---------------------------------------------------------------- */
 
 static void mouse_process(void) {
-    if (packet[0] & 0xC0) return;          /* X/Y overflow -- drop packet */
+    if (packet[0] & 0xC0) return;          /* X/Y overflow -- drop */
 
     int dx = (int)packet[1] - (int)((packet[0] << 4) & 0x100);
     int dy = (int)packet[2] - (int)((packet[0] << 3) & 0x100);
@@ -135,8 +68,6 @@ static void mouse_process(void) {
     int32_t maxy = (int32_t)f->height - 1;
     if (mx < 0) mx = 0; else if (mx > maxx) mx = maxx;
     if (my < 0) my = 0; else if (my > maxy) my = maxy;
-
-    cursor_redraw();
 }
 
 static void mouse_irq(interrupt_frame_t *frame) {
@@ -170,7 +101,7 @@ void mouse_init(void) {
     ps2_wait_input(); outb(PS2_DATA, cfg);
 
     mouse_cmd(0xF6); (void)ps2_read();     /* set defaults, eat ACK */
-    mouse_cmd(0xF4); (void)ps2_read();     /* enable data reporting, eat ACK */
+    mouse_cmd(0xF4); (void)ps2_read();     /* enable reporting, eat ACK */
 
     irq_register(12, mouse_irq);
     pic_unmask(12);
@@ -181,10 +112,8 @@ void mouse_init(void) {
         const framebuffer_t *f = fb_get();
         mx = (int32_t)f->width  / 2;
         my = (int32_t)f->height / 2;
-        cursor_on = true;
-        cursor_redraw();
     }
-    console_puts("[mouse] PS/2 enabled, cursor at center\n");
+    console_puts("[mouse] PS/2 enabled\n");
 }
 
 int32_t mouse_x(void)       { return mx; }

@@ -27,6 +27,7 @@
 #include "fb.h"
 #include "fbcon.h"
 #include "mouse.h"
+#include "wm.h"
 #include "io.h"
 
 extern uint8_t __kernel_end;        /* from linker.ld */
@@ -268,7 +269,8 @@ void kernel_main(void) {
         fat_mount();
     }
 
-    mouse_init();   /* draws the cursor last, on top of the boot screen */
+    mouse_init();
+    wm_init();      /* back buffer + demo windows + compositor task */
 
     shell();    /* runs forever as the idle task */
 }
