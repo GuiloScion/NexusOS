@@ -3,13 +3,11 @@
 
 ; NexusOS BIOS bootloader - 512 byte MBR.
 ;
-; Responsibilities:
-;   1. Read the physical memory map from BIOS (int 0x15, eax=0xE820)
-;      and stash it at 0x9000 (count) + 0x9008 (24-byte entries).
-;      Must be done in real mode; BIOS is gone once left.
-;   2. Load the kernel image to physical 0x10000.
-;   3. Enable A20, install GDT, enter 32-bit protected mode.
-;   4. Far-jump to the kernel entry stub at 0x10000.
+;   1. Collect the BIOS E820 memory map at 0x9000/0x9008.
+;   2. Set a VESA linear-framebuffer mode (0x118); on failure the kernel
+;      falls back to its text console.
+;   3. Load the kernel to 0x10000 via int 13h LBA extensions.
+;   4. Enable A20, install GDT, enter protected mode, jump to the kernel.
 
 start:
     cli
@@ -25,31 +23,28 @@ start:
     call print_string
 
     ; ---------------- E820 memory map -------------------------------
-    ; Output:
-    ;   dword [0x9000] = entry count
-    ;   24-byte entries starting at 0x9008
+    ;   dword [0x9000] = entry count, 24-byte entries from 0x9008.
+    ;   (If firmware returns a map with no usable region, the kernel
+    ;    substitutes a conservative default -- see pmm_init.)
     xor ax, ax
     mov es, ax
     mov di, 0x9008
     xor ebx, ebx
-    xor bp, bp                  ; bp = entry count
+    xor bp, bp
 .e820_loop:
     mov eax, 0xE820
     mov edx, 0x534D4150         ; "SMAP"
     mov ecx, 24
     mov dword [es:di + 20], 1   ; default ACPI 3.0 attr = "valid"
     int 0x15
-    jc  .e820_done              ; CF on first call -> unsupported
+    jc  .e820_done              ; CF -> end of list (or unsupported)
     cmp eax, 0x534D4150
     jne .e820_done
-    cmp ecx, 20
-    jb  .e820_skip
+    add di, 24                  ; advance every entry -> loop must end
     inc bp
-    add di, 24
-.e820_skip:
-    test ebx, ebx
+    test ebx, ebx               ; ebx == 0 -> last entry
     jz  .e820_done
-    cmp bp, 64                  ; cap at 64 entries (1.5 KiB)
+    cmp bp, 64
     jb  .e820_loop
 .e820_done:
     mov [0x9000], bp
@@ -57,17 +52,17 @@ start:
     mov word [0x9004], 0
     mov word [0x9006], 0
 
-    ; ---------------- VBE: linear-framebuffer graphics mode ---------
-    ; Get mode info for 1024x768x32 (VBE mode 0x118) into a scratch
-    ; block at 0:0x9800, then set the mode with the linear-FB bit.
-    ; On success, hand the kernel a small descriptor at 0x9700:
-    ;   [0x9700] dd  framebuffer physical base
-    ;   [0x9704] dd  pitch (bytes per scanline)
-    ;   [0x9708] dd  width
-    ;   [0x970C] dd  height
-    ;   [0x9710] dd  bits per pixel
-    ;   [0x9714] dd  valid (1 = graphics mode set, 0 = text mode)
-    ; es is still 0 here (left over from the E820 loop).
+    ; ---------------- VBE linear-framebuffer mode ------------------
+%ifdef TEXT_ONLY
+    ; Build with -dTEXT_ONLY for firmware that HANGS inside the VBE int 0x10
+    ; calls under CSM (some real boards do). Skip VBE entirely; the kernel
+    ; uses its text console.
+    mov dword [0x9714], 0
+%else
+    ; Get mode info for 1024x768 (VBE 0x118), then set it with the LFB bit.
+    ; On success, leave a descriptor at 0x9700 for the kernel; on failure,
+    ; set the "valid" flag to 0 so the kernel uses its text console.
+    ; es is still 0 from the E820 loop.
     mov ax, 0x4F01
     mov cx, 0x118
     mov di, 0x9800
@@ -76,11 +71,11 @@ start:
     jne .vbe_fail
     mov ax, 0x4F02
     mov bx, 0x118
-    or  bx, 0x4000              ; bit 14 = use linear framebuffer
+    or  bx, 0x4000             ; bit 14 = linear framebuffer
     int 0x10
     cmp ax, 0x004F
     jne .vbe_fail
-    mov eax, [0x9800 + 40]      ; PhysBasePtr
+    mov eax, [0x9800 + 40]     ; PhysBasePtr
     mov [0x9700], eax
     movzx eax, word [0x9800 + 16]   ; BytesPerScanLine
     mov [0x9704], eax
@@ -95,18 +90,14 @@ start:
 .vbe_fail:
     mov dword [0x9714], 0
 .vbe_done:
+%endif
 
-    ; ---------------- Load kernel to 0x10000 ------------------------
-    mov ax, 0x1000
-    mov es, ax
-    xor bx, bx
-
-    mov ah, 0x02
-    mov al, 128                 ; 128 sectors = 64 KiB (room to grow)
-    mov ch, 0
-    mov cl, 2                   ; first kernel sector
-    mov dh, 0
+    ; ---------------- Load kernel to 0x10000 (int 13h LBA) ----------
+    ; CHS reads hang on many real USB-boot BIOSes; the LBA extensions are
+    ; universally available on anything that can boot from USB.
+    mov si, kernel_dap
     mov dl, [boot_drive]
+    mov ah, 0x42
     int 0x13
     jc  disk_error
 
@@ -134,6 +125,7 @@ disk_error:
 
 print_string:
     mov ah, 0x0E
+    mov bx, 0x0007             ; page 0, light-grey attribute
 .loop:
     lodsb
     test al, al
@@ -155,8 +147,22 @@ protected_mode:
     jmp 0x08:0x10000
 
 boot_drive:   db 0
+%ifdef TEXT_ONLY
+msg_loading:  db "NexusOS text-mode boot...", 0x0D, 0x0A, 0
+%else
 msg_loading:  db "Booting NexusOS...", 0x0D, 0x0A, 0
+%endif
 msg_disk_err: db "Disk read error!", 0
+
+; Disk Address Packet for the int 13h LBA read of the kernel.
+align 4
+kernel_dap:
+    db 0x10                     ; packet size
+    db 0                        ; reserved
+    dw 127                      ; sectors to read (kernel is ~73)
+    dw 0x0000                   ; destination offset
+    dw 0x1000                   ; destination segment -> phys 0x10000
+    dq 1                        ; start LBA (sector 0 is the MBR itself)
 
 align 8
 gdt_start:

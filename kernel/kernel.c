@@ -114,6 +114,8 @@ static uint64_t e820_ram_end(void) {
         uint64_t top = entries[i].base + entries[i].length;
         if (top > end) end = top;
     }
+    /* Match pmm_init's fallback when firmware reports no usable RAM. */
+    if (end == 0) end = PMM_SYNTH_BASE + PMM_SYNTH_LEN;
     return end;
 }
 

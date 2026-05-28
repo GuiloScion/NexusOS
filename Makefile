@@ -1,4 +1,4 @@
-.PHONY: all run rungui clean debug
+.PHONY: all run rungui text clean debug FORCE
 
 NASM    := nasm
 CC      := gcc
@@ -8,6 +8,10 @@ QEMU    := qemu-system-x86_64
 
 NASM_BOOT_FLAGS   := -f bin
 NASM_KERNEL_FLAGS := -f elf64
+
+# Extra nasm defines for the bootloader. `make text` sets -dTEXT_ONLY to skip
+# VBE for firmware that hangs in the BIOS VBE calls under CSM.
+BOOT_DEFINES ?=
 
 CC_FLAGS := -ffreestanding -fno-pic -fno-stack-protector -fno-builtin \
             -mno-red-zone -mno-mmx -mno-sse -mno-sse2 \
@@ -39,9 +43,13 @@ all: $(OS_IMAGE) $(FAT_IMAGE)
 $(BUILD_DIR):
 	mkdir -p $@
 
-# Bootloader
-$(BOOTLOADER): bootloader/boot.asm | $(BUILD_DIR)
-	$(NASM) $(NASM_BOOT_FLAGS) $< -o $@
+# Bootloader -- depends on FORCE so it is always reassembled. make can't see
+# changes to BOOT_DEFINES (e.g. `make all` vs `make text`), so without this a
+# switch between GUI and text-only builds would silently reuse the stale image.
+FORCE:
+
+$(BOOTLOADER): bootloader/boot.asm FORCE | $(BUILD_DIR)
+	$(NASM) $(NASM_BOOT_FLAGS) $(BOOT_DEFINES) $< -o $@
 
 # Kernel entry stub (explicit rule)
 $(KERNEL_ENTRY_OBJ): kernel/kernel_entry.asm | $(BUILD_DIR)
@@ -80,6 +88,12 @@ run: $(OS_IMAGE) $(FAT_IMAGE)
 	        -drive format=raw,file=$(FAT_IMAGE),if=ide,index=1 \
 	        -m 256M \
 	        -serial stdio -display none -no-reboot
+
+# Text-only image: skips VBE for firmware that hangs in the BIOS VBE calls.
+# Cleans first so the bootloader is reassembled with the new define.
+text:
+	$(MAKE) clean
+	$(MAKE) BOOT_DEFINES=-dTEXT_ONLY all
 
 # Interactive GUI window (needs a display, e.g. WSLg on Windows). Click into
 # the window to grab the mouse; Ctrl-Alt-G releases it.

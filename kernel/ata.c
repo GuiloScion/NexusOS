@@ -117,13 +117,22 @@ bool ata_init(void) {
     outb(REG_COMMAND,  CMD_IDENTIFY);
 
     uint8_t s = inb(REG_STATUS);
-    if (s == 0) {
-        console_puts("[ata] no slave device on primary channel\n");
+    /* 0x00 = nothing there; 0xFF = floating bus (no controller/device, e.g.
+     * a real machine whose disk is SATA/AHCI, not legacy IDE). Either way,
+     * there is no drive to talk to. */
+    if (s == 0 || s == 0xFF) {
+        console_puts("[ata] no device on primary channel\n");
         return false;
     }
 
-    /* Wait for either DRQ (data ready) or ERR. */
-    while (inb(REG_STATUS) & ST_BSY) { }
+    /* Wait for BSY to clear -- but bounded. An absent device leaves the bus
+     * reading 0xFF (BSY always set), which would otherwise hang the boot. */
+    int spin = 1000000;
+    while ((inb(REG_STATUS) & ST_BSY) && --spin) { }
+    if (spin == 0) {
+        console_puts("[ata] timeout; no usable device\n");
+        return false;
+    }
     s = inb(REG_STATUS);
     if (s & ST_ERR) {
         console_puts("[ata] identify error\n");

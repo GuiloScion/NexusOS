@@ -11,6 +11,10 @@
 #define PAGE_SIZE       4096
 #define PAGE_SHIFT      12
 
+/* Fallback usable region when firmware's E820 reports no usable RAM. */
+#define PMM_SYNTH_BASE  0x100000     /* 1 MiB   */
+#define PMM_SYNTH_LEN   0x8000000    /* 128 MiB */
+
 /* E820 entry as the BIOS hands it back. */
 typedef struct PACKED {
     uint64_t base;

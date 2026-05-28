@@ -52,16 +52,29 @@ void pmm_init(uintptr_t kernel_end_phys) {
     uint32_t        count   = *(volatile uint32_t *)E820_COUNT_ADDR;
     e820_entry_t   *entries = (e820_entry_t *)E820_ENTRIES_ADDR;
 
+
     /* Find highest physical address claimed by USABLE E820 entries.
      * Including reserved/MMIO regions (PCI hole at ~1 TiB on QEMU) would
      * balloon the bitmap into tens of MiB and overrun the early 2 MiB
      * identity map, clobbering the page tables at 0x70000. */
-    uint64_t max_addr = 0;
+    uint64_t max_addr     = 0;
+    bool     have_usable  = false;
     for (uint32_t i = 0; i < count; i++) {
         if (entries[i].type != 1) continue;
+        have_usable = true;
         uint64_t top = entries[i].base + entries[i].length;
         if (top > max_addr) max_addr = top;
     }
+
+    /* Some real firmware (seen on an ASUS board under CSM) returns an E820
+     * map containing only reserved/MMIO regions and no usable RAM at all.
+     * The machine clearly has memory, so fall back to a conservative 128 MiB
+     * usable region above 1 MiB rather than failing to boot. */
+    if (!have_usable) {
+        console_puts("[pmm] no usable E820 region; assuming 128 MiB\n");
+        max_addr = PMM_SYNTH_BASE + PMM_SYNTH_LEN;
+    }
+
     bitmap_bits  = (max_addr + PAGE_SIZE - 1) / PAGE_SIZE;
     bitmap_bytes = (bitmap_bits + 7) / 8;
 
@@ -73,11 +86,15 @@ void pmm_init(uintptr_t kernel_end_phys) {
     memset(bitmap, 0xFF, bitmap_bytes);
     used_count = bitmap_bits;
 
-    /* Free what E820 says is usable. */
-    for (uint32_t i = 0; i < count; i++) {
-        if (entries[i].type == 1) {
-            mark_free_range((uintptr_t)entries[i].base, entries[i].length);
+    /* Free what E820 says is usable (or the assumed region if there was none). */
+    if (have_usable) {
+        for (uint32_t i = 0; i < count; i++) {
+            if (entries[i].type == 1) {
+                mark_free_range((uintptr_t)entries[i].base, entries[i].length);
+            }
         }
+    } else {
+        mark_free_range(PMM_SYNTH_BASE, PMM_SYNTH_LEN);
     }
 
     /* Reserve low memory, kernel image, and the bitmap itself. */

@@ -61,6 +61,8 @@ static void vga_putc(char c) {
         vga_cursor += VGA_W - (vga_cursor % VGA_W);
     } else if (c == '\r') {
         vga_cursor -= (vga_cursor % VGA_W);
+    } else if (c == '\b') {
+        if (vga_cursor > 0) vga_cursor--;   /* move back; caller overwrites */
     } else {
         VGA_BUFFER[vga_cursor++] = (uint16_t)(uint8_t)c | (VGA_ATTR << 8);
     }
