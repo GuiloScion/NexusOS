@@ -100,11 +100,11 @@ make run
 
 ```sh
 sudo apt install nasm gcc binutils mtools qemu-system-x86 gdb
-make run
+make rungui   # GUI in a window; use `make run` for headless serial only
 ```
 
-A QEMU window opens with the graphical console; the same log is printed on
-serial:
+`make rungui` opens a QEMU window with the graphical desktop; `make run` is
+serial-only (no window). Either way the boot log goes to serial:
 
 ```
 ==========================================
@@ -139,6 +139,27 @@ make rungui
 
 Click into the window to grab the mouse, drag windows by their title bars, and
 type into the terminal. `Ctrl-Alt-G` releases the mouse grab.
+
+### Build targets
+
+| Target        | What it does                                                       |
+| ------------- | ------------------------------------------------------------------ |
+| `make all`    | Build the GUI image (`build/os.bin`)                               |
+| `make run`    | Build + boot headless (serial, no window)                          |
+| `make rungui` | Build + boot in a GUI window (needs a display)                     |
+| `make text`   | Build a **text-only** image — skips VBE, for real hardware whose firmware hangs on the VBE call |
+| `make debug`  | Boot paused and attach GDB                                         |
+| `make clean`  | Remove `build/`                                                    |
+
+## Running on real hardware
+
+NexusOS boots natively (BIOS/legacy) from a USB stick on a real x86-64 PC — no
+emulator. The short version: write `build/os.bin` raw to a USB stick (DD mode),
+enable **Legacy/CSM** and **USB Legacy Support** in firmware, and boot from it.
+Use `make text` if the graphical mode hangs on your board.
+
+See **[docs/HARDWARE.md](docs/HARDWARE.md)** for the full walkthrough — flashing,
+firmware settings, what works vs. the caveats, and a troubleshooting table.
 
 ### Debugging
 
@@ -179,6 +200,12 @@ the framebuffer, and writes `build/screen.png`:
 bash tools/screenshot.sh           # just capture the boot screen
 bash tools/screenshot.sh help      # type a command first, then capture
 ```
+
+## Architecture
+
+For a full tour — boot flow, the memory model, the scheduler and synchronization
+primitives, the storage stack, and the gfx/compositor design — see
+**[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
 ## File layout
 

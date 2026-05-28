@@ -38,12 +38,16 @@ This will:
 ## Running NexusOS
 
 ```bash
-make run
+make rungui   # GUI in a QEMU window (needs a display, e.g. WSLg)
+make run      # headless: serial console only, no window
 ```
 
-QEMU launches with the OS image as the primary disk and the FAT12 image as a
-second disk, opening a window with the graphical console. Output is also
-mirrored to serial. `Ctrl-A x` exits when running headless.
+QEMU boots with the OS image as the primary disk and the FAT12 image as a second
+disk. `make run` is serial-only (`Ctrl-A x` to exit); `make rungui` opens a
+window with the graphical desktop.
+
+Other targets: `make text` (text-only image for real hardware whose firmware
+hangs on VBE), `make debug` (boot paused under GDB), `make clean`.
 
 To capture the framebuffer to a PNG (handy on headless/WSL setups):
 
@@ -69,3 +73,9 @@ If QEMU doesn't start:
 - Ensure `qemu-system-x86_64` is installed
 - On WSL, a window needs WSLg; otherwise run headless and use
   `tools/screenshot.sh` to capture the framebuffer
+
+## See also
+
+- [HARDWARE.md](HARDWARE.md) — booting NexusOS on a real PC (USB, BIOS/CSM)
+- [ARCHITECTURE.md](ARCHITECTURE.md) — how the OS is put together
+- [../README.md](../README.md) — feature overview and build targets
