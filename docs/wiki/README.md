@@ -1,7 +1,7 @@
-# Build Your Own Operating System — a hands-on wiki
+# Build Your Own Operating System; a hands-on wiki
 
 Welcome! This is a beginner-friendly course on writing an operating system from
-scratch — starting from an empty file and ending with a graphical desktop
+scratch. starting from an empty file and ending with a graphical desktop
 running on real hardware. Every chapter is backed by a **complete, working
 reference OS** ([NexusOS](../../README.md)), so you can always see exactly how
 the idea looks in real, original code.
@@ -10,15 +10,11 @@ You do **not** need prior OS-development experience. You should be comfortable
 reading C and a little assembly, and willing to learn as you go. We explain the
 *why* behind each step, not just the *how*.
 
-> **The golden rule of OS dev:** change one small thing, run it, see what
-> happens. An OS is just a program — a weird one that runs on bare metal with no
-> safety net, but a program. You can absolutely build one.
-
 ## How to use this wiki
 
-- **Read in order** the first time — each chapter builds on the last.
+- **Read in order** the first time, each chapter builds on the last.
 - Keep the [NexusOS source](../../) open alongside. When a chapter says
-  *"see `kernel/pmm.c`"*, go read it — that's the worked example.
+  *"see `kernel/pmm.c`"*, go read it; that's the worked example.
 - After each chapter, **build and run** what you have. Watching it boot (or
   crash!) is how you learn.
 - Stuck? The [Debugging](12-real-hardware.md#debugging) tips and the
@@ -56,7 +52,7 @@ reading](B-resources.md) for when you want to go deeper.
 
 ## What you'll have built
 
-By the end you'll understand — and have a reference for — every layer of a small
+By the end you'll understand, and have a reference for, every layer of a small
 but real OS:
 
 - a custom bootloader that takes the CPU from 16-bit real mode to 64-bit long mode,
