@@ -18,6 +18,16 @@ theme:
     - content.code.copy
     - search.suggest
 
+plugins:
+  - search
+  # Renders the whole site into a single downloadable PDF (via WeasyPrint).
+  - with-pdf:
+      output_path: pdf/nexusos.pdf
+      cover_title: NexusOS
+      cover_subtitle: "Build Your Own Operating System — a from-scratch guide"
+      author: GuiloScion
+      toc_title: Contents
+
 markdown_extensions:
   - admonition
   - pymdownx.superfences

@@ -1,2 +1,5 @@
 # Documentation build dependencies (used by Read the Docs and local `mkdocs`).
 mkdocs-material>=9.5
+# Single-PDF export of the whole site (needs WeasyPrint's system libraries;
+# on Read the Docs these are installed via build.apt_packages in .readthedocs.yaml).
+mkdocs-with-pdf>=1.0

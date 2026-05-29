@@ -5,6 +5,12 @@ build:
   os: ubuntu-24.04
   tools:
     python: "3.12"
+  # System libraries WeasyPrint needs for the mkdocs-with-pdf export.
+  apt_packages:
+    - libpango-1.0-0
+    - libpangoft2-1.0-0
+    - libpangocairo-1.0-0
+    - libgdk-pixbuf-2.0-0
 
 mkdocs:
   configuration: mkdocs.yml

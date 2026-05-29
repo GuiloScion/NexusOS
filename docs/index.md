@@ -5,6 +5,9 @@ custom bootloader, 64-bit kernel, preemptive scheduler, memory management, a
 FAT12 filesystem, and a compositing window manager — that boots in QEMU and on
 real hardware.
 
+> 📄 **[Download the entire guide as a single PDF](pdf/nexusos.pdf)** — the whole
+> site (course + reference) in one file.
+
 This site has two halves:
 
 ## 📚 Build Your Own OS — the course
