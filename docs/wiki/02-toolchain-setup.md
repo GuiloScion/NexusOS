@@ -3,7 +3,7 @@
 [← Introduction](01-introduction.md) · [Home](README.md) · [Next: How a PC boots →](03-how-a-pc-boots.md)
 
 Before writing any OS code, you need tools to assemble, compile, link, and run
-it. Good news: you don't need a special cross-compiler for x86-64 — your normal
+it. Good news: you don't need a special cross-compiler for x86-64; your normal
 host tools work, as long as you tell them *not* to assume an operating system.
 
 ## The tools
@@ -41,7 +41,7 @@ NexusOS flags (from its `Makefile`) say exactly this:
 -m64 -std=c11
 ```
 
-You don't have to memorize these — just know that they tell the compiler *"there
+You don't have to memorize these, just know that they tell the compiler *"there
 is no OS here; emit plain 64-bit code that touches nothing it shouldn't."*
 
 ## How a build comes together
@@ -95,6 +95,6 @@ A window opens and prints `OK`. **You just wrote and ran an operating system's
 first code on a (virtual) bare machine.** Everything from here is adding layers.
 
 If you want to understand *why* `[BITS 16]`, `0x7C00`, and `0xAA55` are what they
-are — that's exactly the next chapter.
+are, that's exactly the next chapter.
 
 [← Introduction](01-introduction.md) · [Home](README.md) · [Next: How a PC boots →](03-how-a-pc-boots.md)
