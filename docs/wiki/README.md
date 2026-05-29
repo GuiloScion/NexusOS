@@ -3,7 +3,7 @@
 Welcome! This is a beginner-friendly course on writing an operating system from
 scratch. starting from an empty file and ending with a graphical desktop
 running on real hardware. Every chapter is backed by a **complete, working
-reference OS** ([NexusOS](../../README.md)), so you can always see exactly how
+reference OS** ([NexusOS](https://github.com/GuiloScion/NexusOS#readme)), so you can always see exactly how
 the idea looks in real, original code.
 
 You do **not** need prior OS-development experience. You should be comfortable
@@ -13,7 +13,7 @@ reading C and a little assembly, and willing to learn as you go. We explain the
 ## How to use this wiki
 
 - **Read in order** the first time, each chapter builds on the last.
-- Keep the [NexusOS source](../../) open alongside. When a chapter says
+- Keep the [NexusOS source](https://github.com/GuiloScion/NexusOS) open alongside. When a chapter says
   *"see `kernel/pmm.c`"*, go read it; that's the worked example.
 - After each chapter, **build and run** what you have. Watching it boot (or
   crash!) is how you learn.

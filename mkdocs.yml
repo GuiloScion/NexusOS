@@ -1,0 +1,56 @@
+site_name: NexusOS
+site_description: A from-scratch x86-64 operating system, and a course on building your own.
+site_author: GuiloScion
+repo_url: https://github.com/GuiloScion/NexusOS
+repo_name: GuiloScion/NexusOS
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - content.code.copy
+    - search.suggest
+
+markdown_extensions:
+  - admonition
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - toc:
+      permalink: true
+
+# Out-of-tree links (e.g. to the repo root README) are intentional and resolve
+# on GitHub; just warn rather than fail the build on the docs site.
+validation:
+  links:
+    not_found: warn
+
+nav:
+  - Home: index.md
+  - "Build Your Own OS":
+      - Overview: wiki/README.md
+      - "1. Introduction": wiki/01-introduction.md
+      - "2. Toolchain & first boot": wiki/02-toolchain-setup.md
+      - "3. How a PC boots": wiki/03-how-a-pc-boots.md
+      - "4. Protected & long mode": wiki/04-protected-long-mode.md
+      - "5. First C kernel": wiki/05-first-c-kernel.md
+      - "6. Interrupts": wiki/06-interrupts.md
+      - "7. Memory management": wiki/07-memory-management.md
+      - "8. Multitasking": wiki/08-multitasking.md
+      - "9. Storage": wiki/09-storage.md
+      - "10. Graphics": wiki/10-framebuffer-graphics.md
+      - "11. Window manager": wiki/11-window-manager.md
+      - "12. Real hardware": wiki/12-real-hardware.md
+      - "13. Beyond": wiki/13-beyond.md
+      - Glossary: wiki/glossary.md
+      - Resources: wiki/B-resources.md
+  - Reference:
+      - Architecture: ARCHITECTURE.md
+      - Running on real hardware: HARDWARE.md
+      - Development setup: SETUP.md

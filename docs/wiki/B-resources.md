@@ -51,7 +51,7 @@ When the wiki and reality disagree, the manuals win:
 
 The most useful resource for *this* guide is the code it's built on. Every
 chapter points at the file that implements it; reading
-[NexusOS](../../README.md) end to end — bootloader, kernel, window manager — is a
+[NexusOS](https://github.com/GuiloScion/NexusOS#readme) end to end — bootloader, kernel, window manager — is a
 complete, working example you can run, modify, and break.
 
 [← Back to Home](README.md)

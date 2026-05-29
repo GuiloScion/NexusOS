@@ -3,3 +3,14 @@ build/
 *.bin
 *.elf
 .DS_Store
+
+# Docs build output and Python virtualenvs
+/site/
+.venv/
+venv/
+__pycache__/
+docs/bin/
+docs/lib/
+docs/lib64/
+docs/include/
+docs/pyvenv.cfg

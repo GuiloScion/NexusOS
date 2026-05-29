@@ -1,0 +1,2 @@
+# Documentation build dependencies (used by Read the Docs and local `mkdocs`).
+mkdocs-material>=9.5

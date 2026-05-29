@@ -78,4 +78,4 @@ If QEMU doesn't start:
 
 - [HARDWARE.md](HARDWARE.md) — booting NexusOS on a real PC (USB, BIOS/CSM)
 - [ARCHITECTURE.md](ARCHITECTURE.md) — how the OS is put together
-- [../README.md](../README.md) — feature overview and build targets
+- [Project README](https://github.com/GuiloScion/NexusOS#readme) — feature overview and build targets
