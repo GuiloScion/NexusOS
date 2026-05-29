@@ -6,7 +6,7 @@
 
 When you turn on a computer, the CPU starts executing instructions with no
 help: no files, no windows, no `printf`. An **operating system** is the program
-that takes that bare machine and turns it into something usable — it manages the
+that takes that bare machine and turns it into something usable, it manages the
 CPU, memory, and devices, and provides services (like "run this program" or
 "read this file") to everything else.
 
@@ -18,9 +18,6 @@ At its core an OS does a few jobs:
 - **Manage the CPU** — let multiple things appear to run at once (scheduling).
 - **Talk to devices** — keyboard, screen, disk, mouse (drivers).
 - **Provide services** — a filesystem, a shell, eventually programs and a GUI.
-
-That's it. It feels like magic from the outside, but each piece is
-understandable on its own. This wiki walks through them one at a time.
 
 ## What we'll build
 
@@ -34,7 +31,7 @@ implementation, **NexusOS**, boots on QEMU and on actual hardware, and includes:
 - a disk driver and a read-only filesystem,
 - a framebuffer graphics stack with a compositing window manager and mouse.
 
-Here's the destination — a desktop with draggable windows and a terminal,
+Here's the destination, a desktop with draggable windows and a terminal,
 running on the OS you'll understand top to bottom:
 
 ![NexusOS desktop](../screenshot.png)
@@ -43,11 +40,11 @@ running on the OS you'll understand top to bottom:
 
 - **x86-64** is the architecture in most desktops/laptops, and QEMU emulates it
   perfectly, so you can develop without risking your real machine.
-- **BIOS/legacy boot** (rather than UEFI) is dramatically simpler to start with
-  — a few hundred bytes of assembly get you booting. (UEFI is a worthy later
+- **BIOS/legacy boot** (rather than UEFI) is dramatically simpler to start with,
+  a few hundred bytes of assembly get you booting. (UEFI is a worthy later
   project.)
 
-The concepts — booting, memory, scheduling, drivers — transfer to *any*
+The concepts, booting, memory, scheduling, drivers, transfer to *any*
 architecture (ARM, RISC-V). The specific instructions differ; the ideas don't.
 
 ## The mindset
@@ -55,12 +52,12 @@ architecture (ARM, RISC-V). The specific instructions differ; the ideas don't.
 Three things make OS dev approachable:
 
 1. **It's incremental.** You'll always have something that boots. Each chapter
-   adds one capability. If it breaks, you changed one thing — so you know where
+   adds one capability. If it breaks, you changed one thing, so you know where
    to look.
 2. **The emulator is your friend.** QEMU boots your OS in under a second, can
    show you registers, and can attach a debugger. You'll iterate fast.
 3. **Crashes are normal and informative.** A triple-fault reboot or a frozen
-   screen isn't failure — it's data. We'll teach you to read it.
+   screen isn't failure, it's data. We'll teach you to read it.
 
 ## What you need to know
 
@@ -71,7 +68,7 @@ Three things make OS dev approachable:
 - **The command line** — to build and run with `make` and `qemu`.
 
 If a term is unfamiliar (real mode? GDT? page table?), check the
-[Glossary](glossary.md) — we define jargon the first time it appears, but the
+[Glossary](glossary.md). We define jargon the first time it appears, but the
 glossary is there for quick lookups.
 
 ## A note on the reference code
