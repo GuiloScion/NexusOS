@@ -2,4 +2,4 @@
 mkdocs-material>=9.5
 # Single-PDF export of the whole site (needs WeasyPrint's system libraries;
 # on Read the Docs these are installed via build.apt_packages in .readthedocs.yaml).
-mkdocs-with-pdf>=1.0
+mkdocs-with-pdf>=0.9.3
