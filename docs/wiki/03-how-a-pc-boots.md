@@ -6,7 +6,7 @@
 
 On a legacy/BIOS PC, the sequence is:
 
-1. The CPU powers on in **16-bit real mode** — the ancient mode of the original
+1. The CPU powers on in **16-bit real mode**, the ancient mode of the original
    1978 8086, for backward compatibility. Only 1 MiB of memory is addressable,
    and there's no memory protection.
 2. The **BIOS** (firmware on the motherboard) runs: it tests hardware, then
@@ -50,8 +50,8 @@ need at boot:
   *only* be obtained in real mode — so the bootloader grabs it now and stashes
   it in memory for the kernel.
 
-> ⚠️ The moment you leave real mode (next chapter), the BIOS is gone. Anything
-> you need from it — the memory map, a video mode — you must collect *first*.
+> The moment you leave real mode (next chapter), the BIOS is gone. Anything
+> you need from it, the memory map, a video mode, you must collect *first*.
 
 ## What a bootloader actually does
 
@@ -109,7 +109,7 @@ Extend your "OK" boot sector to:
 1. Print a longer message with a loop (`int 0x10` in a loop over a string).
 2. Read a second sector from the disk with `int 0x13` and jump to it.
 
-That second step — load more code and jump to it — *is* the heart of a
+That second step, load more code and jump to it, *is* the heart of a
 bootloader. Once you can do that reliably, you're ready to leave the cramped
 16-bit world behind.
 
