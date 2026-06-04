@@ -1,7 +1,10 @@
 # NexusOS
 
+![Total Downloads](https://img.shields.io/github/downloads/GuiloScion/NexusOS/total?label=Downloads&color=blue)
+![Latest Release](https://img.shields.io/github/downloads/GuiloScion/NexusOS/latest/total?label=Latest&color=green)
+
 A small x86-64 operating system, written from scratch. No GRUB, no Limine, no
-tutorial framework — the bootloader, kernel, build system, and every line of
+tutorial framework; the bootloader, kernel, build system, and every line of
 code are original.
 
 ![NexusOS booted to its compositing desktop, with the shell running in a terminal window](docs/screenshot.png)
