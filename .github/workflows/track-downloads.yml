@@ -8,6 +8,11 @@ on:
 permissions:
   contents: write
 
+# Serialize runs so two dispatches can't race to push the CSV.
+concurrency:
+  group: track-downloads
+  cancel-in-progress: false
+
 jobs:
   poll:
     runs-on: ubuntu-latest
@@ -27,12 +32,24 @@ jobs:
       - name: Commit history update
         shell: bash
         run: |
-          if [[ -n "$(git status --porcelain data/download_history.csv)" ]]; then
-            git config user.name "nexusos-stats-bot"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add data/download_history.csv
-            git commit -m "chore(stats): daily download snapshot"
-            git push
-          else
+          if [[ -z "$(git status --porcelain data/download_history.csv)" ]]; then
             echo "No changes to commit."
+            exit 0
           fi
+          git config user.name "nexusos-stats-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/download_history.csv
+          git commit -m "chore(stats): daily download snapshot"
+          # Rebase-and-retry in case another run pushed between our checkout
+          # and our push (concurrency guard usually prevents this, but belt
+          # and braces).
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              echo "Pushed on attempt $attempt."
+              exit 0
+            fi
+            echo "Push attempt $attempt rejected; rebasing on origin/main and retrying."
+            git pull --rebase origin main
+          done
+          echo "Failed to push after 5 attempts." >&2
+          exit 1
