@@ -1,0 +1,15 @@
+# Book build artifacts.
+#
+# The PDF and the concatenated manuscript are deliberately NOT tracked:
+# the PDF is the paid Leanpub artifact, and `combined.md` is a transient
+# build product. Anyone who wants to rebuild the PDF locally can do so
+# with `python build_book.py` against the markdown source in this
+# directory.
+
+BuildYourOwnOS.pdf
+combined.md
+_pass1.pdf
+
+# Python bytecode if anyone runs the scripts from here
+__pycache__/
+*.pyc
