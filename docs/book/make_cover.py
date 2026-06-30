@@ -6,11 +6,23 @@ Uses Cambria (Windows) for serif text and Consolas for the monospace
 boot-log motif. Falls back to PIL's default font if a face is missing.
 """
 
+import argparse
 import os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cover.png")
+parser = argparse.ArgumentParser(
+    description="Generate cover.png for Leanpub. Pass --sample to produce "
+                "sample-cover.png instead — same artwork, with the top "
+                "overline changed to FREE SAMPLE.")
+parser.add_argument("--sample", action="store_true",
+                    help="Build the sample cover (sample-cover.png).")
+args = parser.parse_args()
+
+OUT = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "sample-cover.png" if args.sample else "cover.png",
+)
 
 W, H = 1800, 2700
 
@@ -119,7 +131,12 @@ def draw_centered(s, f, y, color):
 
 # ---------------------------------------------------------------- overline
 # Small caps marker above the title — sets genre/tone immediately.
-overline = "A   HANDS-ON   BOOK"
+# In sample mode this becomes "FREE SAMPLE" so a Leanpub browser scanning
+# the catalog can tell at a glance that this is a preview not the full book.
+if args.sample:
+    overline = "F R E E   S A M P L E"
+else:
+    overline = "A   HANDS-ON   BOOK"
 draw_centered(overline, F_OVERLINE, 320, RULE_COL)
 
 # Thin double rule under the overline

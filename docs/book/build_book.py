@@ -24,6 +24,7 @@ mono code, running headers / footers, proper chapter openings, and
 forced page breaks between chapters.
 """
 
+import argparse
 import os
 import re
 import sys
@@ -42,8 +43,17 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 
-SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "combined.md")
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "BuildYourOwnOS.pdf")
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+# Default paths for the full book. The sample build overrides these.
+SRC = os.path.join(HERE, "combined.md")
+OUT = os.path.join(HERE, "BuildYourOwnOS.pdf")
+
+# Sample build settings, set via --sample on the command line.
+SAMPLE_MODE = False
+SAMPLE_SRC = os.path.join(HERE, "manuscript.md")   # already preface + ch1 + ch2
+SAMPLE_OUT = os.path.join(HERE, "sample.pdf")
+LEANPUB_URL = "leanpub.com/build-your-own-os"
 
 
 # ---------------------------------------------------------------- fonts
@@ -235,6 +245,14 @@ def make_styles():
         fontName=FONTS["serif_i"], fontSize=10, leading=14,
         alignment=TA_CENTER, spaceBefore=0, spaceAfter=0,
         textColor=colors.HexColor("#666666"),
+    )
+
+    # FREE SAMPLE marker on the sample build's title page.
+    s["sample_marker"] = ParagraphStyle(
+        name="sample_marker", parent=base["Title"],
+        fontName=FONTS["serif_b"], fontSize=15, leading=20,
+        alignment=TA_CENTER, spaceBefore=0, spaceAfter=0,
+        textColor=colors.HexColor("#c9a76f"),  # warm amber accent
     )
 
     return s
@@ -617,7 +635,19 @@ class BookBuilder:
 
     def add_title_page(self, payload):
         # Push generous top space, then centred title block
-        self.add(Spacer(1, 1.5 * inch))
+        if SAMPLE_MODE:
+            # Sample title page: a small amber pre-title strip identifies
+            # this as the free sample without crowding the main title.
+            # Use &#160; (non-breaking space) to fake letter spacing; the
+            # Paragraph parser otherwise collapses multiple spaces.
+            self.add(Spacer(1, 1.1 * inch))
+            nbsp = "&#160;"
+            spaced = (nbsp * 2).join(list("FREE")) + (nbsp * 4) + \
+                     (nbsp * 2).join(list("SAMPLE"))
+            self.add(Paragraph(spaced, self.styles["sample_marker"]))
+            self.add(Spacer(1, 0.25 * inch))
+        else:
+            self.add(Spacer(1, 1.5 * inch))
         for ln in payload["title"]:
             self.add(Paragraph(escape_xml(ln), self.styles["title_main"]))
         self.add(Spacer(1, 0.4 * inch))
@@ -630,6 +660,12 @@ class BookBuilder:
         self.add(Paragraph(
             "<i>Companion to the NexusOS reference kernel</i>",
             self.styles["title_sub_small"]))
+        if SAMPLE_MODE:
+            self.add(Spacer(1, 0.4 * inch))
+            self.add(Paragraph(
+                f'<i>Sample: Preface + Chapter 1 + Chapter 2.<br/>'
+                f'Full book at {LEANPUB_URL}</i>',
+                self.styles["title_sub_small"]))
         self.add(PageBreak())
 
     def add_chapter(self, payload):
@@ -853,6 +889,14 @@ def build():
         text = f.read()
     tokens = parse_manuscript(text)
 
+    # Sample build: only the title block + Preface + Chapter 1 + Chapter 2.
+    # The source file is already manuscript.md (which contains exactly those
+    # three sections), so the token stream is naturally limited; we just
+    # need to swap in sample-specific cover/copyright/closing pages and
+    # skip the full TOC (the sample is too short to need one).
+    if SAMPLE_MODE:
+        tokens = _inject_sample_chrome(tokens)
+
     # We need to know, for each page: the chapter title (running header)
     # and whether this is a chapter-open page (no header). ReportLab's
     # onPage callback fires BEFORE the page's flowables draw, so we cannot
@@ -883,8 +927,13 @@ def build():
 
     # --- Pass 1: dry layout with placeholder TOC ---------------------------
     raw_story1 = render_tokens_to_story(tokens)
-    pass1_story = _wrap_with_toc(raw_story1, chapter_list, page_info, state,
-                                 toc_placeholder=True)
+    if SAMPLE_MODE:
+        # Sample is short; no TOC. Just markers for chrome bookkeeping.
+        pass1_story = _wrap_without_toc(raw_story1, page_info, state,
+                                        recording=True)
+    else:
+        pass1_story = _wrap_with_toc(raw_story1, chapter_list, page_info,
+                                     state, toc_placeholder=True)
 
     def pass1_decorator(canv, _doc):
         page_no = canv.getPageNumber()
@@ -970,9 +1019,138 @@ def build():
     # Pass 2: rebuild a fresh story (flowables can't be reused across
     # build()s — reportlab caches wrap state on Paragraphs).
     raw_story2 = render_tokens_to_story(tokens)
-    pass2_story = _wrap_with_toc(raw_story2, chapter_list, page_info, state,
-                                 toc_placeholder=False)
+    if SAMPLE_MODE:
+        pass2_story = _wrap_without_toc(raw_story2, page_info, state,
+                                        recording=False)
+    else:
+        pass2_story = _wrap_with_toc(raw_story2, chapter_list, page_info, state,
+                                     toc_placeholder=False)
     doc2.build(pass2_story)
+
+
+def _wrap_without_toc(raw_story, page_info, state, recording):
+    """Sample-build variant of _wrap_with_toc: no TOC inserted, but the
+    chapter-open flippers still need to be wired so the running header
+    and chapter-open page detection work. recording=True is pass 1."""
+    final = []
+    chapter_index = [0]
+    for f in raw_story:
+        if isinstance(f, _ChapterOpenMarker):
+            if recording:
+                final.append(_TOCRecordingFlipper(
+                    f.title, f.plain_title, page_info, state, chapter_index))
+            else:
+                final.append(_TitleFlipper(f.title, state))
+        else:
+            final.append(f)
+    return final
+
+
+def _inject_sample_chrome(tokens):
+    """Add sample-specific front and back matter into the token stream.
+
+    The manuscript file (which we read in sample mode) already starts with
+    the title block and ends with Chapter 2. We add:
+      - a 'FREE SAMPLE' marker as a title-block subtitle line addition
+      - a copyright/colophon page after the title page
+      - an 'End of free sample' page after Chapter 2 with the Leanpub link
+    """
+    out = []
+    # Title block: augment the subtitle with a FREE SAMPLE marker line.
+    title_done = False
+    for kind, payload in tokens:
+        if kind == TOKEN_TITLE_BLOCK and not title_done:
+            # Keep the title block as-is — the FREE SAMPLE indicator is
+            # rendered in add_title_page when SAMPLE_MODE is on.
+            out.append((kind, payload))
+            # Right after the title block, insert a synthesised "Colophon"
+            # front-matter chapter that acts as the copyright/intro page.
+            out.append((TOKEN_CHAPTER, {
+                "kind": "front",
+                "num": "",
+                "title": "About this sample",
+            }))
+            for tok in _sample_colophon_tokens():
+                out.append(tok)
+            title_done = True
+        else:
+            out.append((kind, payload))
+
+    # Closing "end of sample" front-matter chapter at the end.
+    out.append((TOKEN_CHAPTER, {
+        "kind": "front",
+        "num": "",
+        "title": "End of free sample",
+    }))
+    for tok in _sample_closing_tokens():
+        out.append(tok)
+    return out
+
+
+def _sample_colophon_tokens():
+    """Tokens for the sample's colophon / copyright page."""
+    paras = [
+        "This is a free sample of *Build Your Own Operating System*, a "
+        "hands-on book that takes you from a 512-byte BIOS boot sector to "
+        "a graphical desktop running on real hardware, paired with "
+        "**NexusOS**, a roughly three-thousand-line x86-64 reference "
+        "kernel you can clone, build, and modify.",
+
+        "What you have here is the front of the book: the Preface, "
+        "Chapter 1 (what an operating system is and what we will build), "
+        "and Chapter 2 (your toolchain and the first booting OS, a "
+        "512-byte program that prints `OK` on a virtual machine). "
+        "Chapter 2 ends at the natural cliffhanger: a working boot sector, "
+        "and the question of why exactly `[BITS 16]`, `0x7C00`, and `0xAA55` "
+        "are what they are. Chapter 3 answers that, and the remaining ten "
+        "chapters build the rest of the kernel on top.",
+
+        f"If this front matter pulls you in, the full book is at "
+        f"[{LEANPUB_URL}](https://{LEANPUB_URL}). NexusOS itself is on "
+        "GitHub at [github.com/GuiloScion/NexusOS](https://github.com/GuiloScion/NexusOS), "
+        "MIT-licensed, with the source pinned to the `v1.0-book` tag.",
+
+        "Copyright © 2026 Noah Parsons. All rights reserved on the prose; "
+        "the NexusOS source code referenced throughout is MIT-licensed. "
+        "Please do not redistribute this sample as if it were the whole "
+        "book; do share the Leanpub link with anyone who might want it.",
+    ]
+    return [(TOKEN_PARA, p) for p in paras]
+
+
+def _sample_closing_tokens():
+    """Tokens for the 'end of sample, buy the book' closing page."""
+    paras = [
+        "**This is the end of the free sample.** You have the booting "
+        "boot sector from Chapter 2. The rest of the book builds the OS "
+        "on top of it:",
+
+        "Chapter 3 explains *why* the BIOS hands control to your code "
+        "at `0x7C00` and what tools it leaves you in real mode. "
+        "Chapter 4 walks the CPU from 16-bit real mode through 32-bit "
+        "protected mode into 64-bit long mode, with the actual page-table "
+        "ritual the kernel uses. Chapter 5 lands you in C with two output "
+        "channels (VGA text and the COM1 serial port) and a linker script. "
+        "Chapter 6 builds the IDT, the PIC, the timer, and the keyboard, "
+        "and turns the kernel's exceptions into readable panic dumps. "
+        "Chapter 7 is the memory manager: PMM, VMM, heap, all in one "
+        "self-contained stack. Chapter 8 adds a preemptive scheduler with "
+        "mutexes and semaphores. Chapter 9 talks to a disk. Chapter 10 "
+        "draws pixels. Chapter 11 composites windows. Chapter 12 is the "
+        "hard, honest chapter on real hardware. Chapter 13 maps what to "
+        "build after.",
+
+        f"The full book is at [{LEANPUB_URL}](https://{LEANPUB_URL}). "
+        "It is roughly one hundred pages of focused practitioner content, "
+        "thirteen chapters of working subsystems, a glossary, a full-source "
+        "appendix, and the back-of-the-book references that make OS "
+        "development tractable.",
+
+        "Thank you for reading the sample. If it landed for you, "
+        "the most useful thing you can do beyond buying the book is to "
+        "actually build one of NexusOS's subsystems and send a pull request.",
+    ]
+    return [(TOKEN_PARA, p) for p in paras]
 
 
 def _wrap_with_toc(raw_story, chapter_list, page_info, state,
@@ -1173,5 +1351,23 @@ class _TOCRecordingFlipper(Flowable):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description=("Build BuildYourOwnOS.pdf from the manuscript markdown. "
+                     "Pass --sample to instead build sample.pdf (Preface + "
+                     "Chapter 1 + Chapter 2 only, with sample-specific "
+                     "title-page indicator, colophon, and closing page)."),
+    )
+    parser.add_argument(
+        "--sample", action="store_true",
+        help="Build the free sample PDF (sample.pdf) instead of the full book.",
+    )
+    args = parser.parse_args()
+
+    if args.sample:
+        # Module-level globals so build() and its helpers see the override.
+        globals()["SAMPLE_MODE"] = True
+        globals()["SRC"] = SAMPLE_SRC
+        globals()["OUT"] = SAMPLE_OUT
+
     build()
     print(f"Built {OUT}")
