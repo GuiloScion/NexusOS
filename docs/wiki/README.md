@@ -1,65 +1,49 @@
-# Build Your Own Operating System; a hands-on wiki
+# Build Your Own Operating System — free preview
 
-Welcome! This is a beginner-friendly course on writing an operating system from
-scratch. starting from an empty file and ending with a graphical desktop
-running on real hardware. Every chapter is backed by a **complete, working
-reference OS** ([NexusOS](https://github.com/GuiloScion/NexusOS#readme)), so you can always see exactly how
-the idea looks in real, original code.
+This was the original draft of *Build Your Own Operating System*, a hands-on book that takes you from a 512-byte BIOS boot sector to a graphical desktop running on real hardware. It is paired with **NexusOS**, the reference kernel you'll find in the rest of this repository.
 
-You do **not** need prior OS-development experience. You should be comfortable
-reading C and a little assembly, and willing to learn as you go. We explain the
-*why* behind each step, not just the *how*.
+The polished and complete book is now on Leanpub: **[leanpub.com/build-your-own-os](https://leanpub.com/build-your-own-os)**.
 
-## How to use this wiki
+## What's here, and what isn't
 
-- **Read in order** the first time, each chapter builds on the last.
-- Keep the [NexusOS source](https://github.com/GuiloScion/NexusOS) open alongside. When a chapter says
-  *"see `kernel/pmm.c`"*, go read it; that's the worked example.
-- After each chapter, **build and run** what you have. Watching it boot (or
-  crash!) is how you learn.
-- Stuck? The [Debugging](12-real-hardware.md#debugging) tips and the
-  [Glossary](glossary.md) are there for you.
+This directory contains the first two chapters as a free preview, the same scope as the Leanpub free sample:
 
-## The journey
-
-### Part 0 — Getting started
 1. [Introduction: what is an OS, and what will we build?](01-introduction.md)
 2. [Your toolchain and first boot](02-toolchain-setup.md)
 
-### Part 1 — Booting
-3. [How a PC boots: BIOS, real mode, and the bootloader](03-how-a-pc-boots.md)
-4. [From 16-bit to 64-bit: protected mode, paging, and long mode](04-protected-long-mode.md)
+Plus the back-of-book reference material that the published book also includes:
 
-### Part 2 — A real kernel
-5. [Your first C kernel: freestanding code and output](05-first-c-kernel.md)
-6. [Interrupts: the IDT, exceptions, the PIC, the timer, and the keyboard](06-interrupts.md)
-7. [Memory management: physical frames, paging, and the heap](07-memory-management.md)
+- [Glossary](glossary.md) — the jargon of OS development in plain language
+- [Resources & further reading](B-resources.md) — the references that make OS development tractable
 
-### Part 3 — Making it do things at once
-8. [Multitasking: a scheduler and synchronization](08-multitasking.md)
-9. [Storage: talking to a disk and reading a filesystem](09-storage.md)
+## What's in the full book
 
-### Part 4 — A graphical desktop
-10. [Graphics: the framebuffer, fonts, and a console](10-framebuffer-graphics.md)
-11. [A window manager: the mouse, a compositor, and windows](11-window-manager.md)
+The eleven chapters past Chapter 2 are in the paid Leanpub edition only. Briefly:
 
-### Part 5 — The real world and beyond
-12. [Running on real hardware (and how to debug)](12-real-hardware.md)
-13. [Beyond: userspace, syscalls, and the road ahead](13-beyond.md)
+| Chapter | Topic |
+| ------- | ----- |
+| 3 | How a PC boots: BIOS, real mode, and the bootloader |
+| 4 | From 16-bit to 64-bit: protected mode, paging, and long mode |
+| 5 | Your first C kernel: freestanding code and output |
+| 6 | Interrupts: the IDT, exceptions, the PIC, the timer, and the keyboard |
+| 7 | Memory management: physical frames, paging, and the heap |
+| 8 | Multitasking: a scheduler and synchronization |
+| 9 | Storage: talking to a disk and reading a filesystem |
+| 10 | Graphics: the framebuffer, fonts, and a console |
+| 11 | A window manager: the mouse, a compositor, and windows |
+| 12 | Running on real hardware (and how to debug) |
+| 13 | What to build next |
 
-Plus: a [Glossary](glossary.md) of the jargon, and [Resources & further
-reading](B-resources.md) for when you want to go deeper.
+The book is ~100 pages, typeset in Sitka Display and Consolas, with line-numbered code listings tied to specific functions in this repository at the [`v1.0-book`](https://github.com/GuiloScion/NexusOS/releases/tag/v1.0-book) tag. It also includes Appendix A (full glossary with chapter cross-references), Appendix B (resources), Appendix C (full source of `Makefile`, `linker.ld`, `boot.asm`, `kernel_entry.asm`), and an About-the-Author page.
 
-## What you'll have built
+The book is on Leanpub at **[leanpub.com/build-your-own-os](https://leanpub.com/build-your-own-os)** with a downloadable free sample (the same content as this preview, plus a colophon and a closing chapter map).
 
-By the end you'll understand, and have a reference for, every layer of a small
-but real OS:
+## How to read this preview
 
-- a custom bootloader that takes the CPU from 16-bit real mode to 64-bit long mode,
-- a kernel with interrupts, a physical + virtual memory manager, and a heap,
-- a preemptive scheduler with mutexes and semaphores,
-- a disk driver and a filesystem,
-- a graphics stack with a compositing window manager and a mouse cursor,
-- and the knowledge to boot it on an actual PC.
+Read in order. Each chapter assumes the subsystem from the previous one.
+
+Keep the NexusOS source open alongside; chapter 2 walks you through the toolchain and ends with the smallest possible OS, a 512-byte program that prints `OK` on a virtual machine. By the end of these two chapters you'll have set up your tools and shipped your first booting code.
+
+Stuck? The [Glossary](glossary.md) defines every term the book uses.
 
 Let's go → **[Chapter 1: Introduction](01-introduction.md)**.

@@ -40,8 +40,8 @@ When the wiki and reality disagree, the manuals win:
 - **QEMU** — your primary test machine. `-serial stdio`, `-d int,cpu_reset` (log
   interrupts and resets), and the monitor (`screendump`, `info registers`,
   `input-send-event`) are invaluable.
-- **GDB** — attach to QEMU (`-s -S`) to single-step the kernel. See
-  [Debugging](12-real-hardware.md#debugging).
+- **GDB** — attach to QEMU (`-s -S`) to single-step the kernel. The book's
+  Chapter 12 covers the full real-hardware debugging toolkit.
 - **Bochs** — a slower emulator with an even more detailed internal debugger;
   great for diagnosing triple faults and mode-transition bugs QEMU glosses over.
 - **NASM / GCC / LD / objcopy / mtools** — the build toolchain (see

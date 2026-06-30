@@ -1,6 +1,6 @@
 # 2. Your toolchain and first boot
 
-[← Introduction](01-introduction.md) · [Home](README.md) · [Next: How a PC boots →](03-how-a-pc-boots.md)
+[← Introduction](01-introduction.md) · [Home](README.md)
 
 Before writing any OS code, you need tools to assemble, compile, link, and run
 it. Good news: you don't need a special cross-compiler for x86-64; your normal
@@ -97,4 +97,14 @@ first code on a (virtual) bare machine.** Everything from here is adding layers.
 If you want to understand *why* `[BITS 16]`, `0x7C00`, and `0xAA55` are what they
 are, that's exactly the next chapter.
 
-[← Introduction](01-introduction.md) · [Home](README.md) · [Next: How a PC boots →](03-how-a-pc-boots.md)
+---
+
+## End of the free preview
+
+This is where this online preview ends. The remaining eleven chapters cover, in order: how a PC boots in real mode (Chapter 3), the mode-switch ritual from 16-bit through 32-bit to 64-bit long mode (Chapter 4), your first C kernel with two output channels and a linker script (Chapter 5), interrupts and a panic-dumping IDT (Chapter 6), the memory manager (Chapter 7), a preemptive scheduler with mutexes and semaphores (Chapter 8), a PIO ATA driver and FAT12 (Chapter 9), framebuffer graphics (Chapter 10), a compositing window manager (Chapter 11), the honest chapter on real-hardware debugging (Chapter 12), and a roadmap of what to build next (Chapter 13). Plus a glossary with chapter cross-references and an appendix containing the full source of the Makefile, linker script, bootloader, and kernel entry stub.
+
+The complete book is on Leanpub at **[leanpub.com/build-your-own-os](https://leanpub.com/build-your-own-os)**. The free Leanpub sample contains exactly the same scope as this preview (Preface plus Chapters 1 and 2) plus a colophon and closing chapter map, so you can grab it there too if you'd rather have the typeset PDF.
+
+The kernel source the book's listings refer to is in the rest of this repository, pinned to the [`v1.0-book`](https://github.com/GuiloScion/NexusOS/releases/tag/v1.0-book) tag.
+
+[← Introduction](01-introduction.md) · [Home](README.md)
