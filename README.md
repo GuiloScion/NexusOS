@@ -12,8 +12,8 @@ code are original.
 close/minimize buttons, the shell in a terminal window, and a taskbar with
 per-window buttons and an uptime clock.*
 
-> **Want to build one yourself?** This repo includes a full, beginner-friendly
-> course — **[Build Your Own OS](docs/wiki/README.md)** — that teaches OS
+> **Want to build one yourself?** This repo includes part of Build Your Own Operating System, a beginner-friendly
+> book available on Leanpub — **[Build Your Own OS](docs/wiki/README.md)** — that teaches OS
 > development from the first boot instruction to a graphical desktop on real
 > hardware, using NexusOS as the worked example.
 
