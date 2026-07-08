@@ -1,8 +1,10 @@
 # NexusOS
 
-![Total Downloads](https://img.shields.io/github/downloads/GuiloScion/NexusOS/total?label=Downloads&color=blue)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Platform: x86-64](https://img.shields.io/badge/platform-x86--64-lightgrey.svg)
+![Built from scratch](https://img.shields.io/badge/bootloader%20%7C%20kernel%20%7C%20WM-from%20scratch-blue)
 
-A small x86-64 operating system, written from scratch. No GRUB, no Limine, no
+An x86-64 operating system, written from scratch. No GRUB, no Limine, no
 tutorial framework; the bootloader, kernel, build system, and every line of
 code are original.
 
