@@ -33,7 +33,6 @@ Linux or WSL toolchain. No prior operating systems knowledge is assumed.
 | `build_book.py`       | The PDF builder: 2-pass layout, TOC, running headers, page numbers   |
 | `make_cover.py`       | Generates `cover.png` (1800×2700) for Leanpub                        |
 | `cover.png`           | Cover artwork                                                        |
-| `LEANPUB.md`          | Leanpub form fields, blurb, author bio (not part of the book)        |
 
 ## Rebuilding the PDF
 
