@@ -1,12 +1,3 @@
-::title
-Build Your Own
-Operating System
-::subtitle
-A hands-on book, from boot sector to graphical desktop
-::author
-Noah Parsons
-::end-title
-
 # Preface
 
 This book is for the person who has spent years using operating systems and one day caught themselves wondering: *what actually happens between the power button and the cursor blinking on screen?* It is the book I wanted when I started writing one. It takes you from the boot sector to a graphical desktop on real hardware: bootloader, 64-bit kernel, memory management, preemptive scheduler, disk driver, read-only filesystem, framebuffer graphics, compositing window manager. Twelve chapters of working subsystems, with a thirteenth that maps what to build after.
