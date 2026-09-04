@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+title: >-
+  NexusOS and Build Your Own Operating System: a from-scratch
+  x86-64 kernel and its companion course
+message: >-
+  If you use this software or the accompanying book, please cite
+  it using the metadata from this file.
+type: software
+authors:
+  - given-names: Noah
+    family-names: Parsons
+    email: parsons.m.noah@gmail.com
+    orcid: 'https://orcid.org/0009-0000-7224-6040'
+    affiliation: Independent Researcher
+repository-code: 'https://github.com/GuiloScion/NexusOS'
+url: 'https://github.com/GuiloScion/NexusOS'
+abstract: >-
+  NexusOS is an x86-64 operating system written from scratch with
+  no external bootloader, kernel framework, or tutorial
+  scaffolding. It comprises a custom 512-byte MBR bootloader
+  carrying the machine from real mode through protected mode to
+  long mode, a full interrupt descriptor table, a physical frame
+  allocator and four-level paging virtual memory manager, a
+  demand-grown heap, a preemptive round-robin scheduler with
+  mutexes, counting semaphores and condition variables, an
+  interrupt-driven PIO ATA driver, a read-only FAT12 filesystem,
+  and a compositing window manager. Build Your Own Operating
+  System is the companion course in docs/book, which walks a
+  reader through constructing the system stage by stage.
+keywords:
+  - operating systems
+  - x86-64
+  - kernel development
+  - bare metal programming
+  - systems programming
+  - computer science education
+  - assembly language
+license: MIT
+version: v1.0-book
+date-released: '2026-06-29'
