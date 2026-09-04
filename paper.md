@@ -135,9 +135,4 @@ from the same construction, and exists because the sequence of decisions, dead
 ends, and hardware surprises that produced a working system seemed more useful
 to a learner than a finished description of one.
 
-# Acknowledgements
-
-[Anyone who read drafts, tested chapters, or reported problems. If nobody
-has, remove this section.]
-
 # References
