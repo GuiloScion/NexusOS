@@ -1,6 +1,22 @@
 # Build Your Own Operating System — source
 
-This directory holds the source of [*Build Your Own Operating System*](https://leanpub.com/), the book that ships alongside NexusOS as a hands-on companion. The book is paid on Leanpub; the source you can rebuild from is free here.
+This directory holds the source of [*Build Your Own Operating System*](https://leanpub.com/), the book that ships alongside NexusOS as a hands-on companion. The book is available typeset on Leanpub; the source here is openly licensed and you can rebuild it yourself.
+
+## Learning objectives
+
+By working through this book you will build a functioning x86-64 operating
+system from nothing, and understand:
+
+- how a machine boots, and what the firmware hands you
+- the transition from real mode through protected mode to long mode
+- how interrupts and exceptions are dispatched, and how to write handlers
+- virtual memory: paging structures, address translation, and a frame allocator
+- preemptive multitasking, and why synchronisation primitives are necessary
+- reading from disk without a driver stack, and a simple filesystem
+- compositing graphics and a windowing system on a linear framebuffer
+
+Prerequisites: comfort with C, willingness to read x86-64 assembly, and a
+Linux or WSL toolchain. No prior operating systems knowledge is assumed.
 
 ## What's in this directory
 
@@ -45,8 +61,11 @@ The line numbers in each `Listing N.M.` caption refer to the source files **at t
 
 ## License
 
-The book's manuscript (the `.md` files in this directory, plus `cover.png`) is **all rights reserved** — please do not redistribute the PDF or the manuscript text. Buy the PDF on Leanpub if you want the typeset version, or rebuild it yourself from these sources for personal use; both are fine.
+The book's manuscript — the `.md` files in this directory, plus `cover.png` — is
+licensed under [Creative Commons Attribution 4.0 International](LICENSE) (CC BY 4.0). You are free to share, adapt, translate, and build on it, including commercially, provided you give appropriate credit.
 
-The build pipeline itself (`build_book.py`, `make_cover.py`) is MIT-licensed; reuse it for your own books.
+The build pipeline (`build_book.py`, `make_cover.py`) is MIT-licensed; reuse it for your own books.
 
-The NexusOS kernel source that the listings refer to (everything outside `docs/book/`) is MIT-licensed; see the root `LICENSE` file.
+The NexusOS kernel source that the listings refer to — everything outside `docs/book/` — is MIT-licensed; see the root `LICENSE` file.
+
+A typeset PDF is available on [Leanpub](https://leanpub.com/build-your-own-os).
