@@ -3,6 +3,7 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Platform: x86-64](https://img.shields.io/badge/platform-x86--64-lightgrey.svg)
 ![Built from scratch](https://img.shields.io/badge/bootloader%20%7C%20kernel%20%7C%20WM-from%20scratch-blue)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22313291.svg)](https://doi.org/10.5281/zenodo.22313291)
 
 An x86-64 operating system, written from scratch. No GRUB, no Limine, no
 tutorial framework; the bootloader, kernel, build system, and every line of
