@@ -60,11 +60,11 @@ The line numbers in each `Listing N.M.` caption refer to the source files **at t
 
 ## License
 
-The book's manuscript — the `.md` files in this directory, plus `cover.png` — is
+The book's manuscript, the `.md` files in this directory, plus `cover.png`, is
 licensed under [Creative Commons Attribution 4.0 International](LICENSE) (CC BY 4.0). You are free to share, adapt, translate, and build on it, including commercially, provided you give appropriate credit.
 
 The build pipeline (`build_book.py`, `make_cover.py`) is MIT-licensed; reuse it for your own books.
 
-The NexusOS kernel source that the listings refer to — everything outside `docs/book/` — is MIT-licensed; see the root `LICENSE` file.
+The NexusOS kernel source that the listings refer to, everything outside `docs/book/`, is MIT-licensed; see the root `LICENSE` file.
 
 A typeset PDF is available on [Leanpub](https://leanpub.com/build-your-own-os).
